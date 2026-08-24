@@ -3,6 +3,8 @@
 import type { ModelMetadata } from '@/lib/metadata';
 import { useViewerStore } from '@/store/viewer-store';
 
+import { SectionControls } from './SectionControls';
+
 function format(value: number, digits = 2): string {
   return value.toLocaleString('en-US', {
     minimumFractionDigits: digits,
@@ -125,6 +127,8 @@ export function PropertiesPanel({ metadata }: { metadata: ModelMetadata }) {
           </p>
         )}
       </div>
+
+      <SectionControls metadata={metadata} />
 
       <div className="border-t border-slate-200 px-3 py-3">
         <label

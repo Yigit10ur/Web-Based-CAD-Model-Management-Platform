@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { create } from 'zustand';
 
+import type { SectionAxis } from '@/lib/section';
 import type { SnapTarget } from '@/lib/snap';
 
 /**
@@ -23,6 +24,15 @@ export interface Measurement {
   toLabel: string;
 }
 
+export interface SectionState {
+  enabled: boolean;
+  axis: SectionAxis;
+  /** 0..1 across the model's bounding box on that axis, not a world value. */
+  position: number;
+  /** Which half of the model the plane keeps. */
+  flipped: boolean;
+}
+
 interface ViewerState {
   /** Part ids currently hidden by the user. */
   hidden: Set<string>;
@@ -36,6 +46,9 @@ interface ViewerState {
   explode: number;
 
   /** Geometry under the cursor while measuring. */
+  section: SectionState;
+
+  /** Geometry under the cursor while measuring. */
   hover: SnapTarget | null;
   /** First point of a measurement in progress. */
   pending: SnapTarget | null;
@@ -47,6 +60,7 @@ interface ViewerState {
   showAll: () => void;
   setTool: (tool: ViewerTool) => void;
   setExplode: (value: number) => void;
+  setSection: (patch: Partial<SectionState>) => void;
 
   setHover: (target: SnapTarget | null) => void;
   addMeasurementPoint: (target: SnapTarget) => void;
@@ -61,6 +75,8 @@ export const useViewerStore = create<ViewerState>((set) => ({
   selectedFace: null,
   tool: 'select',
   explode: 0,
+
+  section: { enabled: false, axis: 'z', position: 0.5, flipped: false },
 
   hover: null,
   pending: null,
@@ -95,6 +111,8 @@ export const useViewerStore = create<ViewerState>((set) => ({
     set(tool === 'measure' ? { tool, pending: null, hover: null, explode: 0 } : { tool, pending: null, hover: null }),
 
   setExplode: (explode) => set({ explode }),
+
+  setSection: (patch) => set((state) => ({ section: { ...state.section, ...patch } })),
 
   setHover: (hover) => set({ hover }),
 

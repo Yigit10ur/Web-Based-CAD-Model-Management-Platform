@@ -54,7 +54,8 @@ mass in the properties panel in a different frame from the thing on screen.
 
 Loads the converter's output: assembly tree, part selection, B-rep face
 picking, exact mass properties, edge overlay, isolate/hide, an exploded view,
-and point-to-point measurement that snaps to exact CAD geometry.
+point-to-point measurement that snaps to exact CAD geometry, and a capped
+section plane.
 
-Not done yet: angle measurement, clipping planes, markup, and loading anything
-other than the bundled sample.
+Not done yet: angle measurement, an off-axis section plane, markup, and loading
+anything other than the bundled sample.
