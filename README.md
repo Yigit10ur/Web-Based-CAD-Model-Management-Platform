@@ -50,7 +50,7 @@ sharing CAD models (STEP, IGES, STL, DWG and similar formats) over the web.
 ### Documentation
 
 For the architecture, technology choices and roadmap see
-[ARCHITECTURE.md](ARCHITECTURE.md).
+[ARCHITECTURE.en.md](ARCHITECTURE.en.md).
 
 ### Status
 

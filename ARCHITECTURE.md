@@ -1,5 +1,7 @@
 # Mimari
 
+**Türkçe** · [English](ARCHITECTURE.en.md)
+
 Web tabanlı CAD model yönetim platformu. Odak noktası, yüklenen CAD
 dosyalarının tarayıcı üzerinde **detaylı ve gerçek CAD kalitesinde 3B
 incelenmesi**; dosya paylaşımı ve katalog kısmı bunu destekleyen çerçeve.
