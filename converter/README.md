@@ -61,8 +61,9 @@ python scripts/make_fixture.py
 ## Status
 
 STEP and IGES conversion works end to end: assembly tree with names and
-colours, exact mass properties from the B-rep, face groups, and edges shipped
-in the same `.glb` as LINES primitives.
+colours, exact mass properties from the B-rep, face groups, edges shipped in
+the same `.glb` as LINES primitives, and a `snap` block of exact vertices,
+edge definitions and face parameters for the viewer's measurement tool.
 
 Not done yet: the mesh path (`.stl` / `.obj`), Draco compression, thumbnail
 rendering, and the worker loop that polls the database for queued jobs.

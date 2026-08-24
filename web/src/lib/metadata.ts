@@ -25,12 +25,41 @@ export interface PartMetadata {
   bbox: BBox;
 }
 
+export type EdgeKind = 'line' | 'circle' | 'other';
+export type FaceKind = 'plane' | 'cylinder' | 'cone' | 'sphere' | 'other';
+
+export interface EdgeGeometry {
+  kind: EdgeKind;
+  start: Vec3;
+  end: Vec3;
+  length: number;
+  centre: Vec3 | null;
+  axis: Vec3 | null;
+  radius: number | null;
+}
+
+export interface FaceGeometry {
+  kind: FaceKind;
+  normal: Vec3 | null;
+  axis: Vec3 | null;
+  radius: number | null;
+}
+
+/** What a part offers a measurement to snap onto. All exact, from the B-rep. */
+export interface SnapGeometry {
+  vertices: Vec3[];
+  edges: EdgeGeometry[];
+  faces: FaceGeometry[];
+}
+
 export interface ModelMetadata {
   tree: TreeNode[];
   parts: Record<string, PartMetadata>;
   units: string;
   /** Part id -> [start, end) triangle ranges, one per B-rep face, in order. */
   face_groups: Record<string, [number, number][]>;
+  /** Part id -> snap targets. Measurements use this, never the mesh. */
+  snap: Record<string, SnapGeometry>;
 }
 
 export function useModelMetadata(url: string) {
@@ -81,6 +110,24 @@ export function faceOfTriangle(
   if (!ranges) return null;
   const index = ranges.findIndex(([start, end]) => triangleIndex >= start && triangleIndex < end);
   return index === -1 ? null : index;
+}
+
+/** Diagonal of the whole model's bounding box, used to scale snap tolerance. */
+export function modelDiagonal(parts: Record<string, PartMetadata>): number {
+  const boxes = Object.values(parts);
+  if (boxes.length === 0) return 1;
+
+  const low: Vec3 = [Infinity, Infinity, Infinity];
+  const high: Vec3 = [-Infinity, -Infinity, -Infinity];
+
+  for (const part of boxes) {
+    for (let axis = 0; axis < 3; axis += 1) {
+      low[axis] = Math.min(low[axis], part.bbox[0][axis]);
+      high[axis] = Math.max(high[axis], part.bbox[1][axis]);
+    }
+  }
+
+  return Math.hypot(high[0] - low[0], high[1] - low[1], high[2] - low[2]);
 }
 
 /** Centre of the whole model, used as the origin for the exploded view. */

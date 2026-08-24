@@ -161,7 +161,15 @@ deflection ve üst sınırlı bir üçgen bütçesi uygulanmalı.
              "com": [12.0, 3.4, -8.1], "bbox": [[0,0,0],[40,20,10]] }
   },
   "units": "mm",
-  "faceGroups": { "3": [[0, 240], [240, 512]] }
+  "face_groups": { "n1_1": [[0, 240], [240, 512]] },
+  "snap": {
+    "n1_1": {
+      "vertices": [[0, 0, 0]],
+      "edges": [{ "kind": "circle", "centre": [20, 10, 30], "axis": [0, 0, 1],
+                  "radius": 4.0, "length": 25.13 }],
+      "faces": [{ "kind": "cylinder", "axis": [0, 0, 1], "radius": 4.0 }]
+    }
+  }
 }
 ```
 
@@ -176,10 +184,13 @@ Tek bir `<Viewer>` R3F sahnesi, etrafında panel'ler:
   görünümünü veren şey budur.
 - **Assembly ağacı paneli**: `metadata.json → tree`. Göster/gizle, izole et,
   şeffaflaştır.
-- **Seçim**: raycast → mesh + üçgen indeksi → `faceGroups` ile yüzey id'si.
+- **Seçim**: raycast → mesh + üçgen indeksi → `face_groups` ile yüzey id'si.
   Seçim durumu zustand'da; ağaç ve sahne aynı state'i paylaşır.
-- **Ölçüm araçları**: nokta-nokta, kenar uzunluğu, yarıçap/çap, iki yüzey arası
-  açı. Snap davranışı köşe > kenar > yüzey önceliğiyle.
+- **Ölçüm araçları**: nokta-nokta ölçüm, köşe > kenar > yüzey önceliğiyle
+  snap. Snap hedefleri `metadata.json`'daki `snap` bloğundan gelir: köşeler
+  B-rep vertex'leri, çember kenarların çapı CAD tanımından. Ekrandaki üçgen
+  yalnızca *hangi* geometrinin kastedildiğine karar vermek için kullanılır.
+  İki yüzey arası açı henüz yok (düzlem normalleri veride hazır).
 - **Kesit düzlemi**: three.js `clippingPlanes`, eksen başına bir düzlem +
   serbest düzlem.
 - **Patlatılmış görünüm**: parçaların ağırlık merkezinden dışa doğru,
@@ -249,7 +260,7 @@ Converter servisi dışa açık değildir; yalnızca DB ve R2 ile konuşur.
 | OCCT API öğrenme eğrisi | Kalan risk. 1. haftada uçtan uca tek bir STEP dönüşümü bitmeli. |
 | Dockerfile hiç build edilmedi | Yerel geliştirme onsuz yürüdüğü için imaj doğrulanmamış durumda. Deploy haftasına bırakılırsa orada sürpriz çıkar; 3. hafta içinde bir kez build edilmeli. |
 | Devasa STEP dosyaları | Deflection'ı bbox'a göre ölçekle, üçgen bütçesi koy, dosya boyutu üst sınırı uygula. |
-| Ölçüm doğruluğu | Ölçümü mesh üstünde değil, `metadata.json`'daki topolojik veriye snap'leyerek yap. |
+| ~~Ölçüm doğruluğu~~ | **Çözüldü.** Converter `snap` bloğunu (vertex, kenar, yüzey tanımları) yayıyor; viewer ölçümü buna snap'liyor, mesh'e değil. Köşe-köşe ölçüm 40×20 plakanın köşegeninde 44.72 mm veriyor. |
 | Kapsam kayması | Katalog/sosyal özellikler (beğeni, takip, akış) MVP dışı; değer viewer'da. |
 
 ---

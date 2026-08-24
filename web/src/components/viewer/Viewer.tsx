@@ -7,6 +7,7 @@ import { Grid, GizmoHelper, GizmoViewport, OrbitControls } from '@react-three/dr
 import type { ModelMetadata } from '@/lib/metadata';
 import { useViewerStore } from '@/store/viewer-store';
 
+import { MeasureLayer } from './MeasureLayer';
 import { Model } from './Model';
 
 export function Viewer({ url, metadata }: { url: string; metadata: ModelMetadata }) {
@@ -30,6 +31,8 @@ export function Viewer({ url, metadata }: { url: string; metadata: ModelMetadata
       <Suspense fallback={null}>
         <Model url={url} metadata={metadata} />
       </Suspense>
+
+      <MeasureLayer />
 
       {/* Rotated onto the XY plane so it reads as the CAD ground plane. */}
       <Grid

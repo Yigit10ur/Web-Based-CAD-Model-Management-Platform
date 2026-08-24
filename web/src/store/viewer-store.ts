@@ -1,4 +1,7 @@
+import * as THREE from 'three';
 import { create } from 'zustand';
+
+import type { SnapTarget } from '@/lib/snap';
 
 /**
  * Viewer state lives here, not in the scene graph.
@@ -8,7 +11,17 @@ import { create } from 'zustand';
  * the scene from drifting apart. See ARCHITECTURE.md section 6.
  */
 
-export type ViewerTool = 'none' | 'measure' | 'section' | 'markup';
+export type ViewerTool = 'select' | 'measure';
+
+export interface Measurement {
+  id: string;
+  from: THREE.Vector3;
+  to: THREE.Vector3;
+  distance: number;
+  /** What each end snapped to, so a reader can tell corner from surface. */
+  fromLabel: string;
+  toLabel: string;
+}
 
 interface ViewerState {
   /** Part ids currently hidden by the user. */
@@ -22,20 +35,36 @@ interface ViewerState {
   /** 0 = assembled, 1 = fully exploded. */
   explode: number;
 
+  /** Geometry under the cursor while measuring. */
+  hover: SnapTarget | null;
+  /** First point of a measurement in progress. */
+  pending: SnapTarget | null;
+  measurements: Measurement[];
+
   select: (partId: string | null, face?: number | null) => void;
   toggleVisibility: (partId: string) => void;
   isolate: (partId: string, allPartIds: string[]) => void;
   showAll: () => void;
   setTool: (tool: ViewerTool) => void;
   setExplode: (value: number) => void;
+
+  setHover: (target: SnapTarget | null) => void;
+  addMeasurementPoint: (target: SnapTarget) => void;
+  cancelPending: () => void;
+  removeMeasurement: (id: string) => void;
+  clearMeasurements: () => void;
 }
 
 export const useViewerStore = create<ViewerState>((set) => ({
   hidden: new Set<string>(),
   selected: null,
   selectedFace: null,
-  tool: 'none',
+  tool: 'select',
   explode: 0,
+
+  hover: null,
+  pending: null,
+  measurements: [],
 
   select: (partId, face = null) => set({ selected: partId, selectedFace: face }),
 
@@ -55,7 +84,42 @@ export const useViewerStore = create<ViewerState>((set) => ({
 
   showAll: () => set({ hidden: new Set<string>() }),
 
-  setTool: (tool) => set({ tool }),
+  // Switching tools drops anything half finished rather than leaving a stray
+  // first point to be picked up later by an unrelated click.
+  //
+  // Measuring also collapses the exploded view. Measurements are stored in CAD
+  // coordinates while an exploded part is drawn away from where its data says
+  // it is, so an exploded measurement would draw a line whose length disagreed
+  // with its own label.
+  setTool: (tool) =>
+    set(tool === 'measure' ? { tool, pending: null, hover: null, explode: 0 } : { tool, pending: null, hover: null }),
 
   setExplode: (explode) => set({ explode }),
+
+  setHover: (hover) => set({ hover }),
+
+  addMeasurementPoint: (target) =>
+    set((state) => {
+      if (!state.pending) return { pending: target };
+
+      const measurement: Measurement = {
+        id: `${Date.now()}-${state.measurements.length}`,
+        from: state.pending.point.clone(),
+        to: target.point.clone(),
+        distance: state.pending.point.distanceTo(target.point),
+        fromLabel: state.pending.label,
+        toLabel: target.label,
+      };
+
+      return { pending: null, measurements: [...state.measurements, measurement] };
+    }),
+
+  cancelPending: () => set({ pending: null }),
+
+  removeMeasurement: (id) =>
+    set((state) => ({
+      measurements: state.measurements.filter((measurement) => measurement.id !== id),
+    })),
+
+  clearMeasurements: () => set({ measurements: [], pending: null }),
 }));

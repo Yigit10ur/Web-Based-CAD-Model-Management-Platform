@@ -22,7 +22,16 @@ from pathlib import Path
 
 import numpy as np
 
-from app.models import ConversionResult, ModelMetadata, PartMetadata, TreeNode
+from app.models import (
+    ConversionResult,
+    EdgeGeometry,
+    FaceGeometry,
+    ModelMetadata,
+    PartMetadata,
+    SnapGeometry,
+    TreeNode,
+    Vec3,
+)
 
 
 def available() -> bool:
@@ -158,9 +167,6 @@ def read_parts(source: Path) -> list[Part]:
     ]
 
 
-Vec3 = tuple[float, float, float]
-
-
 def bounding_box(shape) -> tuple[Vec3, Vec3]:
     from OCP.Bnd import Bnd_Box
     from OCP.BRepBndLib import BRepBndLib
@@ -216,6 +222,7 @@ def tessellate(shape, deflection: float):
     vertices: list[tuple[float, float, float]] = []
     triangles: list[tuple[int, int, int]] = []
     face_ranges: list[tuple[int, int]] = []
+    used_faces: list[object] = []
 
     explorer = TopExp_Explorer(shape, TopAbs_FACE)
     while explorer.More():
@@ -240,6 +247,10 @@ def tessellate(shape, deflection: float):
                 triangles.append((a - 1 + offset, b - 1 + offset, c - 1 + offset))
 
             face_ranges.append((start, len(triangles)))
+            # Returned alongside the ranges so face metadata cannot drift out
+            # of step with them: a face without a triangulation is skipped
+            # here, and must be skipped there too.
+            used_faces.append(face)
 
         explorer.Next()
 
@@ -247,6 +258,7 @@ def tessellate(shape, deflection: float):
         np.array(vertices, dtype=np.float64).reshape(-1, 3),
         np.array(triangles, dtype=np.int64).reshape(-1, 3),
         face_ranges,
+        used_faces,
     )
 
 
@@ -292,6 +304,129 @@ def edge_polylines(shape) -> list[np.ndarray]:
     return polylines
 
 
+def describe_face(face) -> FaceGeometry:
+    """Classify a face and pull out the parameters a measurement needs."""
+    from OCP.BRepAdaptor import BRepAdaptor_Surface
+    from OCP.GeomAbs import GeomAbs_SurfaceType
+    from OCP.TopAbs import TopAbs_Orientation
+
+    adaptor = BRepAdaptor_Surface(face)
+    kind = adaptor.GetType()
+
+    if kind == GeomAbs_SurfaceType.GeomAbs_Plane:
+        direction = adaptor.Plane().Axis().Direction()
+        normal = (direction.X(), direction.Y(), direction.Z())
+        # The surface normal ignores how the face is used in the solid, so a
+        # reversed face would report an inward normal and flip any angle
+        # measured against it.
+        if face.Orientation() == TopAbs_Orientation.TopAbs_REVERSED:
+            normal = (-normal[0], -normal[1], -normal[2])
+        return FaceGeometry(kind="plane", normal=normal)
+
+    if kind == GeomAbs_SurfaceType.GeomAbs_Cylinder:
+        cylinder = adaptor.Cylinder()
+        axis = cylinder.Axis().Direction()
+        return FaceGeometry(
+            kind="cylinder",
+            axis=(axis.X(), axis.Y(), axis.Z()),
+            radius=cylinder.Radius(),
+        )
+
+    if kind == GeomAbs_SurfaceType.GeomAbs_Cone:
+        axis = adaptor.Cone().Axis().Direction()
+        return FaceGeometry(
+            kind="cone",
+            axis=(axis.X(), axis.Y(), axis.Z()),
+            radius=adaptor.Cone().RefRadius(),
+        )
+
+    if kind == GeomAbs_SurfaceType.GeomAbs_Sphere:
+        return FaceGeometry(kind="sphere", radius=adaptor.Sphere().Radius())
+
+    return FaceGeometry(kind="other")
+
+
+def describe_edges(shape) -> list[EdgeGeometry]:
+    """Every B-rep edge with its exact endpoints, length and circle parameters."""
+    from OCP.BRep import BRep_Tool
+    from OCP.BRepAdaptor import BRepAdaptor_Curve
+    from OCP.GCPnts import GCPnts_AbscissaPoint
+    from OCP.GeomAbs import GeomAbs_CurveType
+    from OCP.TopAbs import TopAbs_EDGE
+    from OCP.TopExp import TopExp
+    from OCP.TopoDS import TopoDS
+    from OCP.TopTools import TopTools_IndexedMapOfShape
+
+    edge_map = TopTools_IndexedMapOfShape()
+    TopExp.MapShapes_s(shape, TopAbs_EDGE, edge_map)
+
+    described: list[EdgeGeometry] = []
+    for index in range(1, edge_map.Extent() + 1):
+        edge = TopoDS.Edge_s(edge_map.FindKey(index))
+        if BRep_Tool.Degenerated_s(edge):
+            continue
+
+        curve = BRepAdaptor_Curve(edge)
+        start = curve.Value(curve.FirstParameter())
+        end = curve.Value(curve.LastParameter())
+        kind = curve.GetType()
+
+        common = {
+            "start": (start.X(), start.Y(), start.Z()),
+            "end": (end.X(), end.Y(), end.Z()),
+            "length": GCPnts_AbscissaPoint.Length_s(curve),
+        }
+
+        if kind == GeomAbs_CurveType.GeomAbs_Circle:
+            circle = curve.Circle()
+            centre = circle.Location()
+            axis = circle.Axis().Direction()
+            described.append(
+                EdgeGeometry(
+                    kind="circle",
+                    centre=(centre.X(), centre.Y(), centre.Z()),
+                    axis=(axis.X(), axis.Y(), axis.Z()),
+                    radius=circle.Radius(),
+                    **common,
+                )
+            )
+        elif kind == GeomAbs_CurveType.GeomAbs_Line:
+            described.append(EdgeGeometry(kind="line", **common))
+        else:
+            described.append(EdgeGeometry(kind="other", **common))
+
+    return described
+
+
+def corner_points(shape) -> list[Vec3]:
+    """Exact B-rep vertices, the first thing a measurement should snap to."""
+    from OCP.BRep import BRep_Tool
+    from OCP.TopAbs import TopAbs_VERTEX
+    from OCP.TopExp import TopExp
+    from OCP.TopoDS import TopoDS
+    from OCP.TopTools import TopTools_IndexedMapOfShape
+
+    vertex_map = TopTools_IndexedMapOfShape()
+    TopExp.MapShapes_s(shape, TopAbs_VERTEX, vertex_map)
+
+    seen: list[Vec3] = []
+    for index in range(1, vertex_map.Extent() + 1):
+        point = BRep_Tool.Pnt_s(TopoDS.Vertex_s(vertex_map.FindKey(index)))
+        candidate = (point.X(), point.Y(), point.Z())
+        # A vertex shared by several faces can appear more than once with a
+        # different orientation, which would put duplicate snap targets on the
+        # same corner.
+        if not any(
+            abs(candidate[0] - existing[0]) < 1e-7
+            and abs(candidate[1] - existing[1]) < 1e-7
+            and abs(candidate[2] - existing[2]) < 1e-7
+            for existing in seen
+        ):
+            seen.append(candidate)
+
+    return seen
+
+
 def choose_deflection(shape) -> float:
     """Scale tessellation deflection with model size, within configured bounds."""
     from app.pipeline import choose_deflection as clamp
@@ -332,10 +467,11 @@ def convert(
     scene = trimesh.Scene()
     parts: dict[str, PartMetadata] = {}
     face_groups: dict[str, list[tuple[int, int]]] = {}
+    snap: dict[str, SnapGeometry] = {}
     triangle_total = 0
 
     for index, part in enumerate(leaves):
-        vertices, faces, ranges = tessellate(part.shape, deflection)
+        vertices, faces, ranges, brep_faces = tessellate(part.shape, deflection)
         if len(faces) == 0:
             continue
 
@@ -371,6 +507,11 @@ def convert(
 
         parts[part.id] = mass_properties(part.shape)
         face_groups[part.id] = ranges
+        snap[part.id] = SnapGeometry(
+            vertices=corner_points(part.shape),
+            edges=describe_edges(part.shape),
+            faces=[describe_face(face) for face in brep_faces],
+        )
         triangle_total += len(faces)
         part.mesh_index = index  # type: ignore[attr-defined]
 
@@ -387,6 +528,7 @@ def convert(
         parts=parts,
         units="mm",
         face_groups=face_groups,
+        snap=snap,
     )
 
     out_glb.parent.mkdir(parents=True, exist_ok=True)

@@ -24,6 +24,11 @@ export function PropertiesPanel({ metadata }: { metadata: ModelMetadata }) {
   const selectedFace = useViewerStore((state) => state.selectedFace);
   const explode = useViewerStore((state) => state.explode);
   const setExplode = useViewerStore((state) => state.setExplode);
+  const tool = useViewerStore((state) => state.tool);
+  const measurements = useViewerStore((state) => state.measurements);
+  const removeMeasurement = useViewerStore((state) => state.removeMeasurement);
+  const clearMeasurements = useViewerStore((state) => state.clearMeasurements);
+  const measuring = tool === 'measure';
 
   const part = selected ? metadata.parts[selected] : null;
   const faceCount = selected ? (metadata.face_groups[selected]?.length ?? 0) : 0;
@@ -45,6 +50,43 @@ export function PropertiesPanel({ metadata }: { metadata: ModelMetadata }) {
       <div className="border-b border-slate-200 px-3 py-2">
         <h2 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Properties</h2>
       </div>
+
+      {measurements.length > 0 && (
+        <div className="border-b border-slate-200 px-3 py-2">
+          <div className="flex items-center justify-between pb-1">
+            <h3 className="text-xs font-semibold text-slate-500">
+              Measurements ({measurements.length})
+            </h3>
+            <button
+              type="button"
+              className="text-xs text-blue-600 hover:underline"
+              onClick={clearMeasurements}
+            >
+              clear
+            </button>
+          </div>
+
+          <ul className="space-y-1">
+            {measurements.map((measurement) => (
+              <li key={measurement.id} className="group flex items-baseline gap-2">
+                <span className="font-mono text-xs text-slate-900 tabular-nums">
+                  {format(measurement.distance)} mm
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[11px] text-slate-400">
+                  {measurement.fromLabel} → {measurement.toLabel}
+                </span>
+                <button
+                  type="button"
+                  className="text-xs text-slate-400 opacity-0 group-hover:opacity-100 hover:text-red-600"
+                  onClick={() => removeMeasurement(measurement.id)}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto px-3 py-2">
         {part && selected ? (
@@ -86,7 +128,9 @@ export function PropertiesPanel({ metadata }: { metadata: ModelMetadata }) {
 
       <div className="border-t border-slate-200 px-3 py-3">
         <label
-          className="flex items-center justify-between pb-1 text-xs text-slate-500"
+          className={`flex items-center justify-between pb-1 text-xs ${
+            measuring ? 'text-slate-300' : 'text-slate-500'
+          }`}
           htmlFor="explode"
         >
           Explode
@@ -99,9 +143,15 @@ export function PropertiesPanel({ metadata }: { metadata: ModelMetadata }) {
           max={2}
           step={0.01}
           value={explode}
+          disabled={measuring}
           onChange={(event) => setExplode(Number(event.target.value))}
-          className="w-full accent-blue-600"
+          className="w-full accent-blue-600 disabled:cursor-not-allowed disabled:accent-slate-300"
         />
+        {measuring && (
+          <p className="pt-1 text-[11px] text-slate-400">
+            Disabled while measuring: measurements are in model coordinates.
+          </p>
+        )}
       </div>
     </aside>
   );

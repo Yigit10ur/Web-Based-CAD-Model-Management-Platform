@@ -164,7 +164,15 @@ The rough shape of `metadata.json`:
              "com": [12.0, 3.4, -8.1], "bbox": [[0,0,0],[40,20,10]] }
   },
   "units": "mm",
-  "faceGroups": { "3": [[0, 240], [240, 512]] }
+  "face_groups": { "n1_1": [[0, 240], [240, 512]] },
+  "snap": {
+    "n1_1": {
+      "vertices": [[0, 0, 0]],
+      "edges": [{ "kind": "circle", "centre": [20, 10, 30], "axis": [0, 0, 1],
+                  "radius": 4.0, "length": 25.13 }],
+      "faces": [{ "kind": "cylinder", "axis": [0, 0, 1], "radius": 4.0 }]
+    }
+  }
 }
 ```
 
@@ -179,10 +187,14 @@ A single `<Viewer>` R3F scene surrounded by panels:
   layer — this is what produces the CAD look.
 - **Assembly tree panel**: driven by `metadata.json → tree`. Show/hide, isolate,
   make transparent.
-- **Selection**: raycast → mesh + triangle index → face id via `faceGroups`.
+- **Selection**: raycast → mesh + triangle index → face id via `face_groups`.
   Selection state lives in zustand; the tree and the scene share it.
-- **Measurement tools**: point-to-point, edge length, radius/diameter, angle
-  between two faces. Snapping priority: vertex > edge > face.
+- **Measurement tools**: point-to-point measurement, snapping vertex > edge >
+  face. Snap targets come from the `snap` block in `metadata.json`: corners are
+  B-rep vertices, and a circular edge's diameter comes from the CAD definition.
+  The triangle on screen is used only to decide *which* piece of geometry was
+  meant. Angle between two faces is not built yet (the plane normals are
+  already in the data).
 - **Clipping plane**: three.js `clippingPlanes`, one plane per axis plus a free
   plane.
 - **Exploded view**: parts pushed outward from the centre of mass, driven by a
@@ -254,7 +266,7 @@ and R2.
 | OCCT API learning curve | The remaining risk. One end-to-end STEP conversion must be done in week 1. |
 | The Dockerfile has never been built | Local development works without it, so the image is unverified. Left until deployment week it will surprise you; build it once during week 3. |
 | Very large STEP files | Scale deflection with the bounding box, cap the triangle budget, enforce a file size limit. |
-| Measurement accuracy | Snap measurements to the topological data in `metadata.json`, not to the mesh. |
+| ~~Measurement accuracy~~ | **Solved.** The converter emits a `snap` block (vertices, edges, face definitions) and the viewer snaps measurements to it rather than to the mesh. A corner-to-corner measurement across the 40×20 plate reads 44.72 mm. |
 | Scope creep | Catalogue/social features (likes, follows, feeds) are out of scope; the value is in the viewer. |
 
 ---

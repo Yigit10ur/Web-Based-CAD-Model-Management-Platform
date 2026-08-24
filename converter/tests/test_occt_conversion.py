@@ -124,3 +124,56 @@ def test_part_colours_survive_the_round_trip(converted):
     }
 
     assert materials["Support Post"][:3] == pytest.approx([0.80, 0.45, 0.20], abs=0.01)
+
+
+def test_snap_geometry_matches_the_solids(converted):
+    metadata, _ = converted
+    names = _names(metadata)
+    by_name = {names[pid]: snap for pid, snap in metadata["snap"].items()}
+
+    plate = by_name["Base Plate"]
+    assert len(plate["vertices"]) == 8
+    assert len(plate["edges"]) == 12
+    assert {edge["kind"] for edge in plate["edges"]} == {"line"}
+    assert {face["kind"] for face in plate["faces"]} == {"plane"}
+
+    post = by_name["Support Post"]
+    circles = [edge for edge in post["edges"] if edge["kind"] == "circle"]
+    assert len(circles) == 2
+
+
+def test_circular_edges_carry_the_cad_radius(converted):
+    metadata, _ = converted
+    names = _names(metadata)
+    post_id = next(pid for pid, name in names.items() if name == "Support Post")
+
+    for edge in metadata["snap"][post_id]["edges"]:
+        if edge["kind"] == "circle":
+            # A diameter read off the tessellated polyline would be short by
+            # the chord error; this one comes from the circle definition.
+            assert edge["radius"] == pytest.approx(4.0, rel=1e-9)
+
+
+def test_plane_normals_point_out_of_the_solid(converted):
+    metadata, _ = converted
+    names = _names(metadata)
+    plate_id = next(pid for pid, name in names.items() if name == "Base Plate")
+
+    normals = [
+        face["normal"] for face in metadata["snap"][plate_id]["faces"] if face["normal"]
+    ]
+    # A box has one face per axis direction; a reversed face would show up as a
+    # duplicate normal and a missing opposite.
+    assert len(normals) == 6
+    for axis in range(3):
+        assert any(normal[axis] == pytest.approx(1.0) for normal in normals)
+        assert any(normal[axis] == pytest.approx(-1.0) for normal in normals)
+
+
+def test_face_geometry_is_aligned_with_face_groups(converted):
+    metadata, _ = converted
+
+    for part_id, ranges in metadata["face_groups"].items():
+        # The two lists are indexed the same way; if they ever drift, picking a
+        # face would report another face's type and radius.
+        assert len(metadata["snap"][part_id]["faces"]) == len(ranges)
