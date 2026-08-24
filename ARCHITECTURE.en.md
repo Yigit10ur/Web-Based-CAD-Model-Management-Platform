@@ -21,7 +21,7 @@ Two options were considered:
 | Approach | Pros | Cons |
 |---|---|---|
 | **A. WASM on the client** (`occt-import-js`) | ~1 day to integrate, no separate service | Meshes, hierarchy and colours only. No exact measurement, mass properties or face-level selection. Large files consume browser memory. |
-| **B. OCCT on the server** (Python + OCP) | Full access to B-rep topology: exact volume/area/centre of mass, edge curves, face- and edge-level selection and measurement. Process once, serve a light `.glb` to everyone. | A separate service plus Docker. Roughly one week of setup cost. |
+| **B. OCCT on the server** (Python + OCP) | Full access to B-rep topology: exact volume/area/centre of mass, edge curves, face- and edge-level selection and measurement. Process once, serve a light `.glb` to everyone. | A separate service. Steep learning curve. |
 
 **Chosen: B.** The product's differentiator is "detailed inspection", so access
 to topological data is non-negotiable. Without edge curves a model looks like a
@@ -64,8 +64,15 @@ flowchart LR
   explode factor)
 
 ### Converter service
-- **Python + FastAPI**, inside Docker (OCCT dependencies are painful outside it)
+- **Python + FastAPI**. Local development runs in a virtualenv; the Docker
+  image is for deployment (see the note below)
 - **OCCT bindings**: `cadquery-ocp` (pip) — alternatively `pythonocc-core` (conda)
+
+  > **Verified 2026-08-24.** `cadquery-ocp` 7.9.3.1.1 installed cleanly with
+  > pip on macOS arm64 / Python 3.12; a STEP write/read round trip, exact mass
+  > properties, tessellation and edge extraction all produced correct results.
+  > Docker is not required for local development. Fly.io and Railway build the
+  > image remotely, so local Docker may not be needed for deployment either.
 - **trimesh** — the light path for mesh formats (STL/OBJ/PLY)
 - Output: a **Draco/meshopt compressed `.glb`** plus `metadata.json`
 
@@ -237,7 +244,9 @@ and R2.
 
 | Risk | Mitigation |
 |---|---|
-| OCCT setup and API learning curve | The riskiest part. A Docker image and one end-to-end STEP conversion must be done in week 1. |
+| ~~OCCT setup~~ | **Retired 2026-08-24.** Installation verified locally; see the note in section 3. |
+| OCCT API learning curve | The remaining risk. One end-to-end STEP conversion must be done in week 1. |
+| The Dockerfile has never been built | Local development works without it, so the image is unverified. Left until deployment week it will surprise you; build it once during week 3. |
 | Very large STEP files | Scale deflection with the bounding box, cap the triangle budget, enforce a file size limit. |
 | Measurement accuracy | Snap measurements to the topological data in `metadata.json`, not to the mesh. |
 | Scope creep | Catalogue/social features (likes, follows, feeds) are out of scope; the value is in the viewer. |

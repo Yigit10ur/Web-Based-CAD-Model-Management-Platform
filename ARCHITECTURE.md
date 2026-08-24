@@ -21,7 +21,7 @@ merkezinde bir **dönüştürme (tessellation) servisi** var.
 | Yaklaşım | Artı | Eksi |
 |---|---|---|
 | **A. İstemcide WASM** (`occt-import-js`) | Kurulumu ~1 gün, ayrı servis yok | Sadece mesh + hiyerarşi + renk. Exact ölçüm, kütle özellikleri, yüzey bazlı seçim yok. Büyük dosya tarayıcı belleğini yer. |
-| **B. Sunucuda OCCT** (Python + OCP) | B-rep topolojisine tam erişim: exact hacim/alan/ağırlık merkezi, kenar çizgileri, yüzey/kenar bazlı seçim ve ölçüm. Bir kez işle, herkese hafif `.glb` servis et. | Ayrı bir servis + Docker. Kurulum maliyeti ~1 hafta. |
+| **B. Sunucuda OCCT** (Python + OCP) | B-rep topolojisine tam erişim: exact hacim/alan/ağırlık merkezi, kenar çizgileri, yüzey/kenar bazlı seçim ve ölçüm. Bir kez işle, herkese hafif `.glb` servis et. | Ayrı bir servis. Öğrenme eğrisi dik. |
 
 **Seçim: B.** Ürünün ayırt edici değeri "detaylı inceleme" olduğu için,
 topolojik veriye erişim vazgeçilmez. Kenar çizgileri (edge polyline) olmadan
@@ -61,8 +61,15 @@ flowchart LR
 - **zustand** — viewer state (seçili parça, aktif araç, kesit düzlemi, patlatma oranı)
 
 ### Converter servisi
-- **Python + FastAPI**, Docker içinde (OCCT bağımlılıkları Docker dışında sancılı)
+- **Python + FastAPI**. Yerel geliştirme sanal ortamda yürür; Docker imajı
+  deploy içindir (aşağıdaki nota bakınız)
 - **OCCT bindings**: `cadquery-ocp` (pip) — alternatif `pythonocc-core` (conda)
+
+  > **Doğrulandı (2026-08-24).** `cadquery-ocp` 7.9.3.1.1, macOS arm64 /
+  > Python 3.12 ortamına pip ile sorunsuz kuruldu; STEP yaz/oku turu, exact
+  > kütle özellikleri, tessellation ve kenar çıkarma doğru sonuç verdi.
+  > Docker yerel geliştirme için gerekli değil. Fly.io ve Railway imajı kendi
+  > tarafında build ettiğinden deploy'da da yerel Docker'a ihtiyaç olmayabilir.
 - **trimesh** — mesh formatları (STL/OBJ/PLY) için hafif yol
 - Çıktı: **Draco/meshopt sıkıştırmalı `.glb`** + `metadata.json`
 
@@ -232,7 +239,9 @@ Converter servisi dışa açık değildir; yalnızca DB ve R2 ile konuşur.
 
 | Risk | Karşılık |
 |---|---|
-| OCCT kurulumu ve API öğrenme eğrisi | En riskli parça. 1. haftada Docker imajı ve uçtan uca tek bir STEP dönüşümü bitmeli. |
+| ~~OCCT kurulumu~~ | **Elendi (2026-08-24).** Kurulum yerel ortamda doğrulandı; bölüm 3'teki nota bakınız. |
+| OCCT API öğrenme eğrisi | Kalan risk. 1. haftada uçtan uca tek bir STEP dönüşümü bitmeli. |
+| Dockerfile hiç build edilmedi | Yerel geliştirme onsuz yürüdüğü için imaj doğrulanmamış durumda. Deploy haftasına bırakılırsa orada sürpriz çıkar; 3. hafta içinde bir kez build edilmeli. |
 | Devasa STEP dosyaları | Deflection'ı bbox'a göre ölçekle, üçgen bütçesi koy, dosya boyutu üst sınırı uygula. |
 | Ölçüm doğruluğu | Ölçümü mesh üstünde değil, `metadata.json`'daki topolojik veriye snap'leyerek yap. |
 | Kapsam kayması | Katalog/sosyal özellikler (beğeni, takip, akış) MVP dışı; değer viewer'da. |
