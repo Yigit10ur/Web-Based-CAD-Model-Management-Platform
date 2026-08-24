@@ -45,8 +45,8 @@ def convert(source: Path, out_glb: Path) -> ConversionResult:
                 "OCCT bindings are not installed; "
                 'run: pip install -e ".[cad]" or use the Docker image'
             )
-        # Bounding box is not known before the file is read, so the reader
-        # picks the deflection itself once it has one.
-        return occt.convert(source, out_glb, deflection=settings.max_deflection)
+        # Deflection is left to the reader: it needs the bounding box, which
+        # is not known until the file has been read.
+        return occt.convert(source, out_glb)
 
     raise NotImplementedError(f"mesh path not implemented yet: {suffix}")

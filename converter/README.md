@@ -48,7 +48,21 @@ ruff format --check .
 pytest
 ```
 
+## Test fixture
+
+`tests/fixtures/assembly.step` is generated rather than hand made, so the
+reader path is exercised against real product structure -- names, colours and a
+three part assembly:
+
+```bash
+python scripts/make_fixture.py
+```
+
 ## Status
 
-Skeleton only. The OCCT pipeline in `app/cad/occt.py` is unimplemented and is
-the subject of the `spike/occt-step-to-glb` branch.
+STEP and IGES conversion works end to end: assembly tree with names and
+colours, exact mass properties from the B-rep, face groups, and edges shipped
+in the same `.glb` as LINES primitives.
+
+Not done yet: the mesh path (`.stl` / `.obj`), Draco compression, thumbnail
+rendering, and the worker loop that polls the database for queued jobs.

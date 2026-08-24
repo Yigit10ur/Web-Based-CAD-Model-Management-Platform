@@ -34,8 +34,9 @@ class ModelMetadata(BaseModel):
     tree: list[TreeNode]
     parts: dict[str, PartMetadata]
     units: str = "mm"
-    # Mesh index -> list of [start, end) triangle ranges, one per B-rep face.
-    # Face level selection and measurement snapping both depend on this.
+    # Part id -> list of [start, end) triangle ranges, one per B-rep face.
+    # The ranges tile the part's triangle list in order. Face level selection
+    # and measurement snapping both depend on this.
     face_groups: dict[str, list[tuple[int, int]]] = Field(default_factory=dict)
 
 
