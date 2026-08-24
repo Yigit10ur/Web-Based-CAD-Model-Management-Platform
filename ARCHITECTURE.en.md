@@ -193,6 +193,11 @@ A single `<Viewer>` R3F scene surrounded by panels:
   "zoom to selection".
 - **Markup**: notes pinned to 3D points (`annotations.anchor_json`).
 
+Coordinate system: the scene is **Z-up**, matching the CAD data. The camera is
+given `up = [0, 0, 1]` rather than rotating the geometry into three.js' Y-up
+convention; rotating it would leave every bounding box and centre of mass in
+the properties panel in a different frame from the object on screen.
+
 One rule for state management: **the scene graph is not the source of truth.**
 Visibility, selection and colour live in the zustand store and R3F components
 read from it. Otherwise tree/scene synchronisation breaks down quickly.

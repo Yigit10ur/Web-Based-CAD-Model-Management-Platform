@@ -15,12 +15,14 @@ interface ViewerState {
   hidden: Set<string>;
   /** Part id under selection, or null. */
   selected: string | null;
+  /** Index of the selected B-rep face within the selected part, or null. */
+  selectedFace: number | null;
   /** Active inspection tool. */
   tool: ViewerTool;
   /** 0 = assembled, 1 = fully exploded. */
   explode: number;
 
-  select: (partId: string | null) => void;
+  select: (partId: string | null, face?: number | null) => void;
   toggleVisibility: (partId: string) => void;
   isolate: (partId: string, allPartIds: string[]) => void;
   showAll: () => void;
@@ -31,10 +33,11 @@ interface ViewerState {
 export const useViewerStore = create<ViewerState>((set) => ({
   hidden: new Set<string>(),
   selected: null,
+  selectedFace: null,
   tool: 'none',
   explode: 0,
 
-  select: (partId) => set({ selected: partId }),
+  select: (partId, face = null) => set({ selected: partId, selectedFace: face }),
 
   toggleVisibility: (partId) =>
     set((state) => {

@@ -135,7 +135,10 @@ def read_parts(source: Path) -> list[Part]:
             components = TDF_LabelSequence()
             shape_tool.GetComponents_s(source_label, components)
             for index in range(1, components.Length() + 1):
-                child_path = f"{path}.{index}"
+                # Underscore, not a dot: three.js strips "." from glTF node
+                # names when it loads them, which would collapse "n1.1" and
+                # "n11" onto the same id in the viewer.
+                child_path = f"{path}_{index}"
                 part.children.append(
                     walk(
                         components.Value(index),

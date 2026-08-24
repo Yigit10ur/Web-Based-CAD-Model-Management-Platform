@@ -189,6 +189,11 @@ Tek bir `<Viewer>` R3F sahnesi, etrafında panel'ler:
   "seçime odaklan".
 - **Markup**: 3B noktaya iğnelenmiş notlar (`annotations.anchor_json`).
 
+Koordinat sistemi: sahne **Z-up**'tır, yani CAD verisiyle aynı. Kameraya
+`up = [0, 0, 1]` verilir; geometri three.js'in Y-up kabulüne döndürülmez.
+Döndürülseydi özellik panelindeki her bounding box ve ağırlık merkezi,
+ekrandaki nesneden farklı bir çerçevede kalırdı.
+
 State yönetiminde kural: **sahne grafiği tek doğru kaynak değildir.** Görünürlük,
 seçim ve renk zustand store'unda tutulur; R3F bileşenleri bunu okur. Aksi halde
 ağaç paneli ile sahne senkronizasyonu kısa sürede bozulur.

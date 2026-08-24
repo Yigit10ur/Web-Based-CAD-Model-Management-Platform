@@ -1,72 +1,55 @@
 'use client';
 
+import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import {
-  Edges,
-  GizmoHelper,
-  GizmoViewcube,
-  Grid,
-  OrbitControls,
-} from '@react-three/drei';
+import { Grid, GizmoHelper, GizmoViewport, OrbitControls } from '@react-three/drei';
 
+import type { ModelMetadata } from '@/lib/metadata';
 import { useViewerStore } from '@/store/viewer-store';
 
-/**
- * Placeholder geometry, standing in for a loaded .glb until the converter
- * service exists. It is here so the R3F/drei setup can be smoke tested:
- * orbit, view cube, edge overlay and store-driven selection all run through
- * the same path the real model will use.
- */
-function PlaceholderPart() {
-  const selected = useViewerStore((s) => s.selected);
-  const select = useViewerStore((s) => s.select);
-  const isSelected = selected === 'placeholder';
+import { Model } from './Model';
 
-  return (
-    <mesh
-      onClick={(event) => {
-        event.stopPropagation();
-        select(isSelected ? null : 'placeholder');
-      }}
-    >
-      <boxGeometry args={[2, 1, 1.4]} />
-      <meshStandardMaterial
-        color={isSelected ? '#3b82f6' : '#9ca3af'}
-        metalness={0.1}
-        roughness={0.6}
-      />
-      {/* Edge overlay is what makes a model read as CAD rather than a mesh. */}
-      <Edges linewidth={1} color={isSelected ? '#1d4ed8' : '#334155'} />
-    </mesh>
-  );
-}
-
-export function Viewer() {
-  const select = useViewerStore((s) => s.select);
+export function Viewer({ url, metadata }: { url: string; metadata: ModelMetadata }) {
+  const select = useViewerStore((state) => state.select);
 
   return (
     <Canvas
-      camera={{ position: [4, 3, 5], fov: 45 }}
+      // CAD data is Z-up and the geometry is left in the coordinates the
+      // metadata describes, so the camera is told which way is up rather than
+      // the model being rotated into three.js' Y-up convention. Rotating the
+      // geometry instead would put every bbox and centre of mass in the
+      // properties panel in a different frame from the thing on screen.
+      camera={{ position: [110, -90, 80], up: [0, 0, 1], fov: 40, near: 0.1, far: 5000 }}
       onPointerMissed={() => select(null)}
     >
       <color attach="background" args={['#f1f5f9']} />
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[5, 8, 5]} intensity={1.2} />
+      <ambientLight intensity={0.9} />
+      <directionalLight position={[60, -40, 80]} intensity={1.4} />
+      <directionalLight position={[-50, 40, 20]} intensity={0.5} />
 
-      <PlaceholderPart />
+      <Suspense fallback={null}>
+        <Model url={url} metadata={metadata} />
+      </Suspense>
 
+      {/* Rotated onto the XY plane so it reads as the CAD ground plane. */}
       <Grid
-        args={[20, 20]}
+        cellSize={10}
+        sectionSize={50}
         cellColor="#cbd5e1"
         sectionColor="#94a3b8"
-        position={[0, -0.75, 0]}
-        fadeDistance={25}
+        rotation={[Math.PI / 2, 0, 0]}
+        fadeDistance={900}
+        fadeStrength={1}
         infiniteGrid
+        side={2}
       />
 
-      <OrbitControls makeDefault enableDamping />
+      <OrbitControls makeDefault enableDamping target={[20, 10, 15]} />
+      {/* An axis triad rather than a view cube: drei's cube is labelled for a
+          Y-up world and shows "BOTTOM" on top in a Z-up scene, which is worse
+          than no cube at all. A Z-up view cube is its own piece of work. */}
       <GizmoHelper alignment="bottom-right" margin={[72, 72]}>
-        <GizmoViewcube />
+        <GizmoViewport axisColors={['#dc2626', '#16a34a', '#2563eb']} labelColor="white" />
       </GizmoHelper>
     </Canvas>
   );
