@@ -99,7 +99,17 @@ export function snapTo(
   snap: SnapGeometry | undefined,
   faceIndex: number | null,
   tolerance: number,
-): SnapTarget {
+  /**
+   * Active section plane, if any. Raycasting knows nothing about clipping, so
+   * without this a measurement would happily snap to a corner that has been
+   * sectioned away and is not on screen.
+   */
+  clip: THREE.Plane | null = null,
+): SnapTarget | null {
+  const visible = (point: THREE.Vector3) => !clip || clip.distanceToPoint(point) >= 0;
+
+  if (!visible(hit)) return null;
+
   const faceFallback: SnapTarget = {
     point: hit.clone(),
     kind: 'face',
@@ -116,7 +126,7 @@ export function snapTo(
   snap.vertices.forEach((vertex) => {
     const point = toVector(vertex);
     const distance = point.distanceTo(hit);
-    if (distance < bestDistance) {
+    if (distance < bestDistance && visible(point)) {
       best = { point, kind: 'vertex', partId, index: null, label: 'corner' };
       bestDistance = distance;
     }
@@ -129,7 +139,7 @@ export function snapTo(
   snap.edges.forEach((edge, index) => {
     const point = closestOnEdge(hit, edge);
     const distance = point.distanceTo(hit);
-    if (distance < bestDistance) {
+    if (distance < bestDistance && visible(point)) {
       best = { point, kind: 'edge', partId, index, label: describeEdge(edge) };
       bestDistance = distance;
     }

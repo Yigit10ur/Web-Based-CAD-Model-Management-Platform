@@ -195,8 +195,17 @@ A single `<Viewer>` R3F scene surrounded by panels:
   The triangle on screen is used only to decide *which* piece of geometry was
   meant. Angle between two faces is not built yet (the plane normals are
   already in the data).
-- **Clipping plane**: three.js `clippingPlanes`, one plane per axis plus a free
-  plane.
+- **Clipping plane**: three.js `clippingPlanes`, with an axis choice (X/Y/Z),
+  a position across the model bounds and a flip. The cut is **capped with the
+  stencil buffer**: without a cap the solid reads as a hollow shell, which
+  looks like a broken model rather than a section. The cap is drawn per part so
+  each keeps its own colour.
+
+  A section is display only; a part's mass properties still describe the whole
+  solid. Raycasting knows nothing about clipping, so both selection and
+  measurement snapping are filtered to the visible side of the plane -- without
+  that, a measurement could snap to a corner that has been sectioned away. A
+  free (off-axis) plane is not built yet.
 - **Exploded view**: parts pushed outward from the centre of mass, driven by a
   single ratio slider.
 - **Properties panel**: volume / area / bbox / centre of mass for the selected

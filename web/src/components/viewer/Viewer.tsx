@@ -22,6 +22,16 @@ export function Viewer({ url, metadata }: { url: string; metadata: ModelMetadata
       // properties panel in a different frame from the thing on screen.
       camera={{ position: [110, -90, 80], up: [0, 0, 1], fov: 40, near: 0.1, far: 5000 }}
       onPointerMissed={() => select(null)}
+      // three.js creates the context without a stencil buffer by default. The
+      // section cap is drawn through a stencil test, and without the buffer
+      // that test silently passes everywhere, painting a full screen quad
+      // instead of filling the cut.
+      gl={{ stencil: true }}
+      // Clipping planes are set per material rather than globally, so that the
+      // section cap can opt out of being clipped by its own plane.
+      onCreated={({ gl }) => {
+        gl.localClippingEnabled = true;
+      }}
     >
       <color attach="background" args={['#f1f5f9']} />
       <ambientLight intensity={0.9} />

@@ -191,8 +191,16 @@ Tek bir `<Viewer>` R3F sahnesi, etrafında panel'ler:
   B-rep vertex'leri, çember kenarların çapı CAD tanımından. Ekrandaki üçgen
   yalnızca *hangi* geometrinin kastedildiğine karar vermek için kullanılır.
   İki yüzey arası açı henüz yok (düzlem normalleri veride hazır).
-- **Kesit düzlemi**: three.js `clippingPlanes`, eksen başına bir düzlem +
-  serbest düzlem.
+- **Kesit düzlemi**: three.js `clippingPlanes`, eksen seçimi (X/Y/Z), model
+  sınırları boyunca konum ve yön çevirme. Kesit yüzeyi **stencil ile
+  kapatılır**: kapatılmazsa katı içi boş bir kabuk gibi görünür, kesit değil
+  bozuk model okuması verir. Cap parça başına çizilir, böylece her parça kendi
+  rengini taşır.
+
+  Kesit yalnızca görüntülemedir; parçanın kütle özellikleri kesilmemiş katıya
+  aittir. Raycast kırpma düzlemini bilmediği için hem seçim hem ölçüm snap'i
+  düzlemin görünen tarafına ayrıca filtrelenir — yoksa kesilip atılmış bir
+  köşeye ölçüm yapılabilirdi. Serbest (eksen dışı) düzlem henüz yok.
 - **Patlatılmış görünüm**: parçaların ağırlık merkezinden dışa doğru,
   tek bir oran slider'ı ile.
 - **Özellik paneli**: seçili parçanın hacim / alan / bbox / ağırlık merkezi.

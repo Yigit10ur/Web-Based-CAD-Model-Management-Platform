@@ -12,8 +12,11 @@ import {
   modelDiagonal,
   type ModelMetadata,
 } from '@/lib/metadata';
+import { modelBounds, sectionPlane } from '@/lib/section';
 import { snapTo } from '@/lib/snap';
 import { useViewerStore } from '@/store/viewer-store';
+
+import { ClippedSolid } from './ClippedSolid';
 
 const EDGE_SUFFIX = '__edges';
 
@@ -75,12 +78,18 @@ function Part({
   metadata,
   offset,
   tolerance,
+  clip,
+  capSize,
+  order,
 }: {
   part: PartGeometry;
   metadata: ModelMetadata;
   offset: THREE.Vector3;
   /** World-space snap radius, scaled by the caller to the model's size. */
   tolerance: number;
+  clip: THREE.Plane | null;
+  capSize: number;
+  order: number;
 }) {
   const hidden = useViewerStore((state) => state.hidden.has(part.id));
   const isSelected = useViewerStore((state) => state.selected === part.id);
@@ -123,13 +132,24 @@ function Part({
       metadata.snap[part.id],
       brepFace(event),
       tolerance,
+      clip,
     );
 
+  /**
+   * Raycasting ignores clipping planes, so a part that has been sectioned away
+   * still answers the ray. Such a hit is dropped without stopping propagation,
+   * which lets whatever is actually visible behind it take the event.
+   */
+  const sectionedAway = (event: ThreeEvent<PointerEvent | MouseEvent>) =>
+    clip !== null && clip.distanceToPoint(event.point.clone().sub(offset)) < 0;
+
   const handleClick = (event: ThreeEvent<MouseEvent>) => {
+    if (sectionedAway(event)) return;
     event.stopPropagation();
 
     if (tool === 'measure') {
-      addMeasurementPoint(snapAt(event));
+      const target = snapAt(event);
+      if (target) addMeasurementPoint(target);
       return;
     }
 
@@ -138,12 +158,25 @@ function Part({
 
   const handlePointerMove = (event: ThreeEvent<PointerEvent>) => {
     if (tool !== 'measure') return;
+    if (sectionedAway(event)) return;
     event.stopPropagation();
     setHover(snapAt(event));
   };
 
+  const planes = clip ? [clip] : [];
+
   return (
     <group position={position.clone().add(offset)} quaternion={quaternion} scale={scale}>
+      {clip && (
+        <ClippedSolid
+          geometry={part.surface}
+          plane={clip}
+          color={isSelected ? SELECTED_COLOR : part.color}
+          size={capSize}
+          order={order}
+        />
+      )}
+
       <mesh
         geometry={part.surface}
         onClick={handleClick}
@@ -154,12 +187,16 @@ function Part({
           color={isSelected ? SELECTED_COLOR : part.color}
           metalness={0.1}
           roughness={0.6}
+          clippingPlanes={planes}
         />
       </mesh>
 
       {part.edges && (
         <lineSegments geometry={part.edges} raycast={() => null}>
-          <lineBasicMaterial color={isSelected ? SELECTED_EDGE_COLOR : EDGE_COLOR} />
+          <lineBasicMaterial
+            color={isSelected ? SELECTED_EDGE_COLOR : EDGE_COLOR}
+            clippingPlanes={planes}
+          />
         </lineSegments>
       )}
     </group>
@@ -176,9 +213,21 @@ export function Model({ url, metadata }: { url: string; metadata: ModelMetadata 
   // on a bracket and on a chassis.
   const tolerance = useMemo(() => modelDiagonal(metadata.parts) * 0.03, [metadata]);
 
+  const section = useViewerStore((state) => state.section);
+  const bounds = useMemo(() => modelBounds(metadata.parts), [metadata]);
+  const diagonal = useMemo(() => modelDiagonal(metadata.parts), [metadata]);
+
+  const clip = useMemo(
+    () =>
+      section.enabled
+        ? sectionPlane(section.axis, section.position, section.flipped, bounds)
+        : null,
+    [section.enabled, section.axis, section.position, section.flipped, bounds],
+  );
+
   return (
     <group>
-      {parts.map((part) => {
+      {parts.map((part, index) => {
         // Parts move away from the model centre along the line through their
         // own centre of mass, which is the value the converter already
         // computed exactly.
@@ -194,6 +243,9 @@ export function Model({ url, metadata }: { url: string; metadata: ModelMetadata 
             metadata={metadata}
             offset={offset}
             tolerance={tolerance}
+            clip={clip}
+            capSize={diagonal * 1.5}
+            order={index * 2 + 1}
           />
         );
       })}
