@@ -53,8 +53,8 @@ mass in the properties panel in a different frame from the thing on screen.
 ## Status
 
 Loads the converter's output: assembly tree, part selection, B-rep face
-picking, exact mass properties, edge overlay, isolate/hide and an exploded
-view.
+picking, exact mass properties, edge overlay, isolate/hide, an exploded view,
+and point-to-point measurement that snaps to exact CAD geometry.
 
-Not done yet: measurement, clipping planes, markup, and loading anything other
-than the bundled sample.
+Not done yet: angle measurement, clipping planes, markup, and loading anything
+other than the bundled sample.

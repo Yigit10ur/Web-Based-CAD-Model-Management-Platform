@@ -159,5 +159,746 @@
         12
       ]
     ]
+  },
+  "snap": {
+    "n1_1": {
+      "vertices": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          5.0
+        ],
+        [
+          0.0,
+          20.0,
+          0.0
+        ],
+        [
+          0.0,
+          20.0,
+          5.0
+        ],
+        [
+          40.0,
+          0.0,
+          0.0
+        ],
+        [
+          40.0,
+          0.0,
+          5.0
+        ],
+        [
+          40.0,
+          20.0,
+          0.0
+        ],
+        [
+          40.0,
+          20.0,
+          5.0
+        ]
+      ],
+      "edges": [
+        {
+          "kind": "line",
+          "start": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "end": [
+            0.0,
+            0.0,
+            5.0
+          ],
+          "length": 5.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "end": [
+            0.0,
+            20.0,
+            0.0
+          ],
+          "length": 20.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            0.0,
+            20.0,
+            0.0
+          ],
+          "end": [
+            0.0,
+            20.0,
+            5.0
+          ],
+          "length": 5.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            0.0,
+            0.0,
+            5.0
+          ],
+          "end": [
+            0.0,
+            20.0,
+            5.0
+          ],
+          "length": 20.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            40.0,
+            0.0,
+            0.0
+          ],
+          "end": [
+            40.0,
+            0.0,
+            5.0
+          ],
+          "length": 5.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            40.0,
+            0.0,
+            0.0
+          ],
+          "end": [
+            40.0,
+            20.0,
+            0.0
+          ],
+          "length": 20.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            40.0,
+            20.0,
+            0.0
+          ],
+          "end": [
+            40.0,
+            20.0,
+            5.0
+          ],
+          "length": 5.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            40.0,
+            0.0,
+            5.0
+          ],
+          "end": [
+            40.0,
+            20.0,
+            5.0
+          ],
+          "length": 20.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "end": [
+            40.0,
+            0.0,
+            0.0
+          ],
+          "length": 40.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            0.0,
+            0.0,
+            5.0
+          ],
+          "end": [
+            40.0,
+            0.0,
+            5.0
+          ],
+          "length": 40.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            0.0,
+            20.0,
+            0.0
+          ],
+          "end": [
+            40.0,
+            20.0,
+            0.0
+          ],
+          "length": 40.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            0.0,
+            20.0,
+            5.0
+          ],
+          "end": [
+            40.0,
+            20.0,
+            5.0
+          ],
+          "length": 40.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        }
+      ],
+      "faces": [
+        {
+          "kind": "plane",
+          "normal": [
+            -1.0,
+            -0.0,
+            -0.0
+          ],
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "plane",
+          "normal": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "plane",
+          "normal": [
+            -0.0,
+            -1.0,
+            -0.0
+          ],
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "plane",
+          "normal": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "plane",
+          "normal": [
+            -0.0,
+            -0.0,
+            -1.0
+          ],
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "plane",
+          "normal": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "axis": null,
+          "radius": null
+        }
+      ]
+    },
+    "n1_2": {
+      "vertices": [
+        [
+          24.0,
+          9.999999999999998,
+          30.0
+        ],
+        [
+          24.0,
+          9.999999999999998,
+          5.0
+        ]
+      ],
+      "edges": [
+        {
+          "kind": "circle",
+          "start": [
+            24.0,
+            10.0,
+            30.0
+          ],
+          "end": [
+            24.0,
+            9.999999999999998,
+            30.0
+          ],
+          "length": 25.132741228718345,
+          "centre": [
+            20.0,
+            10.0,
+            30.0
+          ],
+          "axis": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "radius": 4.0
+        },
+        {
+          "kind": "line",
+          "start": [
+            24.0,
+            9.999999999999998,
+            5.0
+          ],
+          "end": [
+            24.0,
+            9.999999999999998,
+            30.0
+          ],
+          "length": 25.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "circle",
+          "start": [
+            24.0,
+            10.0,
+            5.0
+          ],
+          "end": [
+            24.0,
+            9.999999999999998,
+            5.0
+          ],
+          "length": 25.132741228718345,
+          "centre": [
+            20.0,
+            10.0,
+            5.0
+          ],
+          "axis": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "radius": 4.0
+        }
+      ],
+      "faces": [
+        {
+          "kind": "cylinder",
+          "normal": null,
+          "axis": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "radius": 4.0
+        },
+        {
+          "kind": "plane",
+          "normal": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "plane",
+          "normal": [
+            -0.0,
+            -0.0,
+            -1.0
+          ],
+          "axis": null,
+          "radius": null
+        }
+      ]
+    },
+    "n1_3": {
+      "vertices": [
+        [
+          14.0,
+          4.0,
+          30.0
+        ],
+        [
+          14.0,
+          4.0,
+          33.0
+        ],
+        [
+          14.0,
+          16.0,
+          30.0
+        ],
+        [
+          14.0,
+          16.0,
+          33.0
+        ],
+        [
+          26.0,
+          4.0,
+          30.0
+        ],
+        [
+          26.0,
+          4.0,
+          33.0
+        ],
+        [
+          26.0,
+          16.0,
+          30.0
+        ],
+        [
+          26.0,
+          16.0,
+          33.0
+        ]
+      ],
+      "edges": [
+        {
+          "kind": "line",
+          "start": [
+            14.0,
+            4.0,
+            30.0
+          ],
+          "end": [
+            14.0,
+            4.0,
+            33.0
+          ],
+          "length": 3.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            14.0,
+            4.0,
+            30.0
+          ],
+          "end": [
+            14.0,
+            16.0,
+            30.0
+          ],
+          "length": 12.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            14.0,
+            16.0,
+            30.0
+          ],
+          "end": [
+            14.0,
+            16.0,
+            33.0
+          ],
+          "length": 3.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            14.0,
+            4.0,
+            33.0
+          ],
+          "end": [
+            14.0,
+            16.0,
+            33.0
+          ],
+          "length": 12.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            26.0,
+            4.0,
+            30.0
+          ],
+          "end": [
+            26.0,
+            4.0,
+            33.0
+          ],
+          "length": 3.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            26.0,
+            4.0,
+            30.0
+          ],
+          "end": [
+            26.0,
+            16.0,
+            30.0
+          ],
+          "length": 12.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            26.0,
+            16.0,
+            30.0
+          ],
+          "end": [
+            26.0,
+            16.0,
+            33.0
+          ],
+          "length": 3.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            26.0,
+            4.0,
+            33.0
+          ],
+          "end": [
+            26.0,
+            16.0,
+            33.0
+          ],
+          "length": 12.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            14.0,
+            4.0,
+            30.0
+          ],
+          "end": [
+            26.0,
+            4.0,
+            30.0
+          ],
+          "length": 12.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            14.0,
+            4.0,
+            33.0
+          ],
+          "end": [
+            26.0,
+            4.0,
+            33.0
+          ],
+          "length": 12.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            14.0,
+            16.0,
+            30.0
+          ],
+          "end": [
+            26.0,
+            16.0,
+            30.0
+          ],
+          "length": 12.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "line",
+          "start": [
+            14.0,
+            16.0,
+            33.0
+          ],
+          "end": [
+            26.0,
+            16.0,
+            33.0
+          ],
+          "length": 12.0,
+          "centre": null,
+          "axis": null,
+          "radius": null
+        }
+      ],
+      "faces": [
+        {
+          "kind": "plane",
+          "normal": [
+            -1.0,
+            -0.0,
+            -0.0
+          ],
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "plane",
+          "normal": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "plane",
+          "normal": [
+            -0.0,
+            -1.0,
+            -0.0
+          ],
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "plane",
+          "normal": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "plane",
+          "normal": [
+            -0.0,
+            -0.0,
+            -1.0
+          ],
+          "axis": null,
+          "radius": null
+        },
+        {
+          "kind": "plane",
+          "normal": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "axis": null,
+          "radius": null
+        }
+      ]
+    }
   }
 }
