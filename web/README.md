@@ -31,7 +31,30 @@ Viewer state rule: visibility, selection and colour live in
 `src/store/viewer-store.ts`, never in the three.js scene graph. The tree panel
 and the scene read from the same store, which is what keeps them in sync.
 
+## Development sample
+
+`public/samples/assembly.glb` and `assembly.json` are the converter's output,
+committed (8 KB) so the viewer can be worked on without a Python environment.
+Regenerate them with:
+
+```bash
+cd ../converter
+python -m app.cli convert tests/fixtures/assembly.step \
+    ../web/public/samples/assembly.glb
+```
+
+## Coordinate system
+
+The scene is **Z-up**, matching the CAD data. The camera is given
+`up = [0, 0, 1]` rather than the model being rotated into three.js' Y-up
+convention: rotating the geometry would leave every bounding box and centre of
+mass in the properties panel in a different frame from the thing on screen.
+
 ## Status
 
-The viewer currently renders placeholder geometry. It will load the `.glb` and
-`metadata.json` produced by the `converter` service once that lands.
+Loads the converter's output: assembly tree, part selection, B-rep face
+picking, exact mass properties, edge overlay, isolate/hide and an exploded
+view.
+
+Not done yet: measurement, clipping planes, markup, and loading anything other
+than the bundled sample.

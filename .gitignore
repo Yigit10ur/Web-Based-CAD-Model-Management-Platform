@@ -32,5 +32,15 @@ __pycache__/
 *.glb
 *.gltf
 *.stl
+# Scratch output directories, wherever they appear.
+converter/samples/
+converter/out/
+
+# Exceptions, listed last so they win: the generated STEP fixture and the
+# viewer's development sample (8 KB), which lets the web app be worked on
+# without a Python environment. Both are reproducible:
+#   python scripts/make_fixture.py
+#   python -m app.cli convert tests/fixtures/assembly.step \
+#       ../web/public/samples/assembly.glb
 !converter/tests/fixtures/**
-samples/
+!web/public/samples/**
