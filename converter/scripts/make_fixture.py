@@ -22,7 +22,8 @@ from OCP.TopLoc import TopLoc_Location
 from OCP.XCAFApp import XCAFApp_Application
 from OCP.XCAFDoc import XCAFDoc_ColorSurf, XCAFDoc_DocumentTool
 
-FIXTURE = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "assembly.step"
+FIXTURES = Path(__file__).resolve().parent.parent / "tests" / "fixtures"
+FIXTURE = FIXTURES / "assembly.step"
 
 
 def _translation(x: float, y: float, z: float) -> TopLoc_Location:
