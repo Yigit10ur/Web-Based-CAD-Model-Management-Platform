@@ -1,0 +1,36 @@
+# Node / Next.js
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Editors / OS
+.DS_Store
+*.swp
+
+# Large CAD binaries are not committed (see CONTRIBUTING.md).
+# Small, appropriately licensed test fixtures are the exception.
+*.step
+*.stp
+*.iges
+*.igs
+*.glb
+*.gltf
+*.stl
+!converter/tests/fixtures/**
+samples/

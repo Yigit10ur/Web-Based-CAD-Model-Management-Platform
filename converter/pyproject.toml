@@ -1,0 +1,44 @@
+[project]
+name = "cad-converter"
+version = "0.1.0"
+description = "CAD tessellation service: STEP/IGES/mesh -> glb + metadata"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+]
+
+[project.optional-dependencies]
+# OCCT is deliberately kept out of the default install: it is a large,
+# platform-sensitive dependency and CI does not need it to lint or to run the
+# tests that do not touch geometry. Installed in the Docker image and in the
+# local dev environment once the week-1 spike lands.
+cad = [
+    "cadquery-ocp>=7.7",
+    "trimesh>=4.5",
+    "numpy>=2.0",
+]
+dev = [
+    "pytest>=8.3",
+    "httpx>=0.27",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
