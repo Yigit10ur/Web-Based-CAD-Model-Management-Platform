@@ -1,0 +1,27 @@
+{
+  "editor.formatOnSave": true,
+
+  "python.defaultInterpreterPath": "${workspaceFolder}/converter/.venv/bin/python",
+  "python.testing.pytestEnabled": true,
+  "python.testing.pytestArgs": ["converter/tests"],
+  "python.analysis.extraPaths": ["${workspaceFolder}/converter"],
+
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+
+  "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[typescriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+
+  "eslint.workingDirectories": ["web"],
+
+  "files.exclude": {
+    "**/.ruff_cache": true,
+    "**/.pytest_cache": true,
+    "**/__pycache__": true
+  }
+}

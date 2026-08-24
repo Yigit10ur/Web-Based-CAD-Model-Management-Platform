@@ -13,7 +13,7 @@
      Converter değişiklikleri için: hangi STEP/STL fixture'ı ile. -->
 
 - [ ] Yerelde manuel test edildi
-- [ ] `pnpm lint && pnpm typecheck` temiz (web değişiklikleri için)
+- [ ] `npm run lint && npm run typecheck` temiz (web değişiklikleri için)
 - [ ] `ruff check` temiz (converter değişiklikleri için)
 
 ## Ekran görüntüsü / Screenshot
