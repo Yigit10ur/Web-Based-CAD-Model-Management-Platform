@@ -8,6 +8,10 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
+    # numpy is a base dependency, not part of [cad]: the conversion module
+    # imports it at module level and the API imports that module for its
+    # readiness check, so the service must be able to load it without OCCT.
+    "numpy>=2.0",
 ]
 
 [project.optional-dependencies]
@@ -18,7 +22,6 @@ dependencies = [
 cad = [
     "cadquery-ocp>=7.7",
     "trimesh>=4.5",
-    "numpy>=2.0",
 ]
 dev = [
     "pytest>=8.3",

@@ -139,7 +139,8 @@ geçmiş revizyonları viewer'da yan yana açılabilsin diye her versiyonun kend
    - `BRepMesh_IncrementalMesh` ile **tessellate** (deflection ayarlanabilir)
    - `BRepGProp` ile **exact hacim, yüzey alanı, ağırlık merkezi**
    - `Bnd_Box` ile bounding box
-   - **Kenarları** ayrıca polyline olarak çıkar → viewer'da `LineSegments`
+   - **Kenarları** eğriden örnekleyerek polyline olarak çıkar; aynı `.glb`
+     içinde LINES primitive'i olarak taşınır → viewer'da `LineSegments`
    - Üçgenleri **yüzey (face) gruplarına** göre etiketle → yüzey bazlı seçim
 5. Sonucu tek `.glb` olarak yaz (Draco/meshopt), `metadata.json` ile birlikte
    R2'ye yükle. Küçük bir thumbnail render'ı da burada üretilir.

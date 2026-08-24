@@ -141,7 +141,8 @@ When a `model_versions` row with `status = 'queued'` is picked up:
    - **Tessellate** with `BRepMesh_IncrementalMesh` (adjustable deflection)
    - **Exact volume, surface area and centre of mass** via `BRepGProp`
    - Bounding box via `Bnd_Box`
-   - Extract **edges** separately as polylines → `LineSegments` in the viewer
+   - Extract **edges** as polylines sampled from the curve; they ride in the
+     same `.glb` as LINES primitives → `LineSegments` in the viewer
    - Tag triangles by their **face groups** → enables face-level selection
 5. Write the result as a single `.glb` (Draco/meshopt) together with
    `metadata.json` and upload both to R2. A small thumbnail render is produced
