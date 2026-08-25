@@ -1,47 +1,109 @@
 # Web Based CAD Model Management Platform
 
+[![CI](https://github.com/Yigit10ur/Web-Based-CAD-Model-Management-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Yigit10ur/Web-Based-CAD-Model-Management-Platform/actions/workflows/ci.yml)
+
 **English** · [Türkçe](#türkçe)
 
-A web based CAD model management platform.
+Upload a CAD assembly and inspect it in the browser: walk the part tree, read
+exact mass properties, measure between corners, and cut a section through it.
 
-## About
+Most web CAD viewers show you a mesh. The interesting part of a CAD file is not
+its mesh — it is the geometry the mesh approximates. This project keeps that
+distinction: the browser is sent triangles to draw, but every number it reports
+comes from the B-rep the CAD file actually contains.
 
-This project aims to build a platform for uploading, versioning, viewing and
-sharing CAD models (STEP, IGES, STL, DWG and similar formats) over the web.
+## What it does
 
-## Planned Features
+**Inspection**
 
-- Uploading and storing CAD files
-- Version (revision) tracking
-- In-browser 3D model preview
-- Metadata and search
-- User and permission management
+- Assembly tree with the part names and colours from the source file
+- Selection down to a single B-rep face, not just a part
+- Exact volume, surface area, centre of mass and bounding box — computed from
+  the B-rep, never measured off the triangles
+- Point-to-point measurement that snaps to real vertices and edges; a circular
+  edge reports the diameter from its CAD definition rather than from the
+  polygon approximating it
+- Section plane, capped with the stencil buffer so a cut solid reads as solid
+  rather than as a hollow shell
+- Exploded view, isolate and hide, and a true edge overlay
 
-## Development
+**Platform**
+
+- Upload straight from the browser to object storage with a presigned URL
+- Conversion runs as a background worker off a database-backed queue
+- Every model belongs to a project, and every read and write is checked
+  against it
+- Sign in with GitHub
+
+## How it works
+
+A CAD file is read once, on the server, by OpenCascade. That pass produces two
+things:
+
+    model.glb        one node per part, plus the B-rep edges as line primitives
+    metadata.json    assembly tree, exact mass properties, face groups,
+                     and the vertices and edge definitions measurements snap to
+
+The viewer reads nothing else. A triangle on screen is only ever used to decide
+*which* piece of geometry the user meant; the answer then comes from
+`metadata.json`. That is why a corner-to-corner measurement across a 40 × 20
+plate reads 44.72 mm and not 44.7-something.
+
+The full reasoning, including the alternatives that were rejected, is in
+[ARCHITECTURE.en.md](ARCHITECTURE.en.md).
+
+## Layout
 
 ```
-/web         → Next.js (TypeScript) — catalogue and 3D viewer
-/converter   → FastAPI + OCCT — CAD conversion service
+/web         Next.js — catalogue, API and the 3D viewer
+/converter   FastAPI + OpenCascade — conversion and the queue worker
 ```
+
+## Getting started
+
+The viewer runs on its own, with no database, storage or account:
 
 ```bash
-cd web && npm install && npm run dev            # http://localhost:3000
-cd converter && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
+cd web && npm install && npm run dev
 ```
 
-Full setup for each service lives in its own README:
-[web/README.md](web/README.md) · [converter/README.md](converter/README.md)
+Then open <http://localhost:3000/sample>.
 
-Working conventions and branching model: [CONTRIBUTING.md](CONTRIBUTING.md)
+For the whole platform you also need Postgres and S3-compatible storage
+(Supabase provides both):
 
-## Documentation
+```bash
+cd web
+cp .env.example .env.local     # fill in, see the comments in the file
+npm run db:migrate
+npm run dev
 
-For the architecture, technology choices and roadmap see
-[ARCHITECTURE.en.md](ARCHITECTURE.en.md).
+cd ../converter
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev,cad]"
+python -m app.worker
+```
+
+Per-service detail: [web/README.md](web/README.md) ·
+[converter/README.md](converter/README.md)
 
 ## Status
 
-The project is at an early stage.
+Working end to end: sign in, upload a STEP file, watch it convert, open it and
+inspect it.
+
+Not built yet: markup, angle measurement, an off-axis section plane, search and
+filtering, thumbnails, a projects and sharing interface, and the mesh import
+path (`.stl` / `.obj`). The web application has no automated tests, which is
+the largest gap.
+
+## Contributing
+
+Working conventions and the branching model: [CONTRIBUTING.md](CONTRIBUTING.md)
+
+## License
+
+[MIT](LICENSE)
 
 ---
 
@@ -49,43 +111,101 @@ The project is at an early stage.
 
 [English](#web-based-cad-model-management-platform) · **Türkçe**
 
-Web tabanlı bir CAD model yönetim platformu.
+Bir CAD montajını yükleyip tarayıcıda inceleyin: parça ağacında gezin, exact
+kütle özelliklerini okuyun, köşeler arası ölçüm yapın, içinden kesit alın.
 
-### Hakkında
+Web tabanlı CAD görüntüleyicilerin çoğu size bir mesh gösterir. Oysa bir CAD
+dosyasının ilginç kısmı mesh'i değil, mesh'in yaklaştırdığı geometridir. Bu
+proje o ayrımı korur: tarayıcıya çizmesi için üçgenler gönderilir, ama
+raporlanan her sayı dosyanın gerçekten içerdiği B-rep'ten gelir.
 
-Bu proje, CAD modellerinin (STEP, IGES, STL, DWG vb.) web üzerinden
-yüklenmesi, sürümlenmesi, görüntülenmesi ve paylaşılması için bir platform
-geliştirmeyi amaçlar.
+### Neler yapıyor
 
-### Planlanan Özellikler
+**İnceleme**
 
-- CAD dosyalarının yüklenmesi ve depolanması
-- Sürüm (revizyon) takibi
-- Tarayıcı üzerinden 3D model önizleme
-- Metadata ve arama
-- Kullanıcı ve yetki yönetimi
+- Kaynak dosyadan gelen parça isimleri ve renkleriyle montaj ağacı
+- Yalnızca parça değil, tek bir B-rep yüzeyine kadar seçim
+- Exact hacim, yüzey alanı, ağırlık merkezi ve sınır kutusu — B-rep'ten
+  hesaplanır, üçgenlerden ölçülmez
+- Gerçek köşe ve kenarlara snap olan nokta-nokta ölçüm; çember bir kenar,
+  kendisini yaklaştıran çokgenden değil CAD tanımından gelen çapı bildirir
+- Stencil ile kapatılmış kesit düzlemi — kesilen katı, boş bir kabuk değil
+  katı olarak okunur
+- Patlatılmış görünüm, izole etme ve gizleme, gerçek kenar katmanı
 
-### Geliştirme
+**Platform**
+
+- Tarayıcıdan doğrudan nesne depolamaya presigned URL ile yükleme
+- Dönüştürme, veritabanı destekli bir kuyruktan beslenen arka plan worker'ında
+- Her model bir projeye ait ve her okuma/yazma buna karşı denetleniyor
+- GitHub ile giriş
+
+### Nasıl çalışıyor
+
+CAD dosyası sunucuda, OpenCascade tarafından bir kez okunur. Bu geçiş iki şey
+üretir:
+
+    model.glb        parça başına bir düğüm, artı B-rep kenarları çizgi olarak
+    metadata.json    montaj ağacı, exact kütle özellikleri, yüz grupları ve
+                     ölçümlerin snap olduğu köşe/kenar tanımları
+
+Viewer başka hiçbir şey okumaz. Ekrandaki üçgen yalnızca kullanıcının *hangi*
+geometriyi kastettiğine karar vermek için kullanılır; cevap `metadata.json`'dan
+gelir. 40 × 20 bir plakanın köşeden köşeye ölçümünün 44.72 mm çıkması, yaklaşık
+bir şey çıkmaması bundandır.
+
+Reddedilen alternatifler dahil gerekçelerin tamamı
+[ARCHITECTURE.md](ARCHITECTURE.md) dosyasındadır.
+
+### Dizin yapısı
 
 ```
-/web         → Next.js (TypeScript) — katalog ve 3B viewer
-/converter   → FastAPI + OCCT — CAD dönüştürme servisi
+/web         Next.js — katalog, API ve 3B viewer
+/converter   FastAPI + OpenCascade — dönüştürme ve kuyruk worker'ı
 ```
+
+### Başlarken
+
+Viewer tek başına, veritabanı, depolama veya hesap olmadan çalışır:
 
 ```bash
-cd web && npm install && npm run dev            # http://localhost:3000
-cd converter && python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
+cd web && npm install && npm run dev
 ```
 
-Her iki servisin ayrıntılı kurulumu kendi README dosyalarındadır:
-[web/README.md](web/README.md) · [converter/README.md](converter/README.md)
+Sonra <http://localhost:3000/sample> adresini açın.
 
-Çalışma kuralları ve dal modeli: [CONTRIBUTING.md](CONTRIBUTING.md)
+Platformun tamamı için ayrıca Postgres ve S3 uyumlu depolama gerekir
+(Supabase ikisini birden verir):
 
-### Dokümantasyon
+```bash
+cd web
+cp .env.example .env.local     # doldurun, açıklamalar dosyanın içinde
+npm run db:migrate
+npm run dev
 
-Mimari, teknoloji seçimleri ve yol haritası için: [ARCHITECTURE.md](ARCHITECTURE.md)
+cd ../converter
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev,cad]"
+python -m app.worker
+```
+
+Servis bazında ayrıntı: [web/README.md](web/README.md) ·
+[converter/README.md](converter/README.md)
 
 ### Durum
 
-Proje başlangıç aşamasındadır.
+Uçtan uca çalışıyor: giriş yap, STEP dosyası yükle, dönüşmesini izle, aç ve
+incele.
+
+Henüz yok: markup, açı ölçümü, eksen dışı kesit düzlemi, arama ve filtreleme,
+küçük resim üretimi, proje ve paylaşım arayüzü, mesh içe aktarma yolu
+(`.stl` / `.obj`). Web uygulamasında otomatik test bulunmuyor; en büyük eksik
+budur.
+
+### Katkı
+
+Çalışma kuralları ve dal modeli: [CONTRIBUTING.md](CONTRIBUTING.md)
+
+### Lisans
+
+[MIT](LICENSE)
