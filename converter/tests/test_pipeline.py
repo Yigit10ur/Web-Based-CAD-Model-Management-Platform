@@ -20,3 +20,13 @@ def test_deflection_scales_with_model_size():
 def test_deflection_stays_within_configured_bounds():
     assert choose_deflection(0.001) == settings.min_deflection
     assert choose_deflection(1_000_000.0) == settings.max_deflection
+
+
+def test_derived_files_land_next_to_the_source():
+    from app.storage import sibling_key
+
+    source = "proj-1/model-2/version-3/source.step"
+    assert sibling_key(source, "model.glb") == "proj-1/model-2/version-3/model.glb"
+    assert (
+        sibling_key(source, "metadata.json") == "proj-1/model-2/version-3/metadata.json"
+    )

@@ -1,0 +1,85 @@
+import { desc, eq } from 'drizzle-orm';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+
+import { ModelWorkspace } from '@/components/viewer/ModelWorkspace';
+import { db, schema } from '@/db';
+import { presignDownload } from '@/lib/storage';
+
+export const dynamic = 'force-dynamic';
+
+interface Props {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ v?: string }>;
+}
+
+export default async function ModelPage({ params, searchParams }: Props) {
+  const { id } = await params;
+  const { v } = await searchParams;
+
+  const model = await db.query.models.findFirst({
+    where: eq(schema.models.id, id),
+    with: { versions: { orderBy: [desc(schema.modelVersions.versionNo)] } },
+  });
+
+  if (!model) notFound();
+
+  const version = v
+    ? model.versions.find((candidate) => candidate.id === v)
+    : model.versions.find((candidate) => candidate.status === 'ready');
+
+  const ready = version?.status === 'ready' && version.glbKey && version.metadataKey;
+
+  return (
+    <main className="flex h-dvh flex-col bg-slate-50">
+      <header className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5">
+        <div className="flex items-baseline gap-3">
+          <Link href="/" className="text-sm text-blue-600 hover:underline">
+            ← Models
+          </Link>
+          <h1 className="text-sm font-medium text-slate-900">{model.name}</h1>
+        </div>
+
+        <div className="flex items-center gap-3 text-xs text-slate-500">
+          {model.versions.length > 1 && (
+            <nav className="flex items-center gap-1">
+              {model.versions.map((candidate) => (
+                <Link
+                  key={candidate.id}
+                  href={`/models/${model.id}?v=${candidate.id}`}
+                  className={`rounded px-1.5 py-0.5 ${
+                    candidate.id === version?.id
+                      ? 'bg-blue-600 text-white'
+                      : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  v{candidate.versionNo}
+                </Link>
+              ))}
+            </nav>
+          )}
+          <span>{version?.sourceFormat.toUpperCase()}</span>
+        </div>
+      </header>
+
+      {ready ? (
+        // Signed on the server: the browser gets links to storage, never
+        // credentials, and the original CAD file is not among them.
+        <ModelWorkspace
+          modelUrl={await presignDownload(version.glbKey!)}
+          metadataUrl={await presignDownload(version.metadataKey!)}
+        />
+      ) : (
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-sm text-slate-500">
+            {version
+              ? version.status === 'failed'
+                ? `Conversion failed: ${version.errorMessage ?? 'unknown error'}`
+                : `Version is ${version.status}. The converter picks it up within a few seconds.`
+              : 'No version has been converted yet.'}
+          </p>
+        </div>
+      )}
+    </main>
+  );
+}

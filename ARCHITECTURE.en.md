@@ -68,6 +68,13 @@ flowchart LR
   image is for deployment (see the note below)
 - **OCCT bindings**: `cadquery-ocp` (pip) — alternatively `pythonocc-core` (conda)
 
+  > **Note on the Supabase pooler.** Both services disable prepared statements
+  > (`prepare: false` in postgres-js, `prepare_threshold = None` in psycopg).
+  > The transaction pooler hands consecutive statements to different backend
+  > sessions, so a driver that silently promotes a repeated query to a prepared
+  > statement fails with `prepared statement "_pg3_0" already exists` -- which
+  > is what happened the first time the worker ran.
+
   > **Verified 2026-08-24.** `cadquery-ocp` 7.9.3.1.1 installed cleanly with
   > pip on macOS arm64 / Python 3.12; a STEP write/read round trip, exact mass
   > properties, tessellation and edge extraction all produced correct results.
@@ -245,16 +252,27 @@ users only, through a presigned download link.
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/api/uploads/presign` | Issues a presigned PUT URL for upload |
-| `POST` | `/api/models` | Creates the model and first version, `status=queued` |
-| `POST` | `/api/models/:id/versions` | New revision |
-| `GET` | `/api/models/:id` | Metadata and version list |
+| `GET` | `/api/models` | List models with their versions |
+| `POST` | `/api/models` | Creates the model and its first version, and returns a presigned PUT URL |
+| `GET` | `/api/models/:id` | One model with its version list |
+| `POST` | `/api/models/:id/versions` | New revision, with a presigned PUT URL |
+| `POST` | `/api/versions/:id/uploaded` | The client confirms its upload finished; the version joins the queue |
 | `GET` | `/api/versions/:id/assets` | Presigned GET URLs for glb / metadata / thumb |
-| `GET` | `/api/models?q=&format=&project=` | Search and filtering |
-| `POST` | `/api/versions/:id/annotations` | 3D markup |
+
+Uploads are three steps rather than one. The row is created before the file
+exists, because the upload needs a key to write to; it stays `uploading` until
+the client confirms, so a half-finished upload is never handed to the
+converter. There is no separate presign endpoint: a URL is only ever issued
+together with the row it belongs to, which means no caller can ask for a signed
+URL to an arbitrary key.
+
+Search and filtering, and the markup endpoint, are not built yet.
 
 The converter service is not exposed publicly; it talks only to the database
-and R2.
+and object storage. It claims work with `UPDATE ... WHERE id = (SELECT ...
+FOR UPDATE SKIP LOCKED LIMIT 1)`, which is a correct queue for several workers
+without a broker, and re-queues anything left `processing` past a timeout,
+which is how a crashed worker's job comes back.
 
 ---
 

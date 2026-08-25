@@ -8,7 +8,29 @@ Design and rationale: [../ARCHITECTURE.md](../ARCHITECTURE.md) sections 3 and 6.
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000
+cp .env.example .env.local     # then fill it in
+npm run db:migrate
+npm run dev                    # http://localhost:3000
+```
+
+Without `.env.local` the catalogue explains what is missing instead of
+crashing, and `/sample` still works: the viewer needs neither a database nor
+object storage.
+
+## Routes
+
+| Path | Needs |
+|---|---|
+| `/` | Catalogue and upload — database, storage |
+| `/models/:id` | Viewer for a converted model — database, storage |
+| `/sample` | Viewer on the bundled sample — nothing |
+
+## Database
+
+```bash
+npm run db:generate   # write a migration from src/db/schema.ts
+npm run db:migrate    # apply migrations
+npm run db:studio     # browse the data
 ```
 
 ## Checks
@@ -34,7 +56,8 @@ and the scene read from the same store, which is what keeps them in sync.
 ## Development sample
 
 `public/samples/assembly.glb` and `assembly.json` are the converter's output,
-committed (8 KB) so the viewer can be worked on without a Python environment.
+committed (8 KB) so the viewer can be worked on without a Python environment
+and without any cloud services.
 Regenerate them with:
 
 ```bash
@@ -57,5 +80,9 @@ picking, exact mass properties, edge overlay, isolate/hide, an exploded view,
 point-to-point measurement that snaps to exact CAD geometry, and a capped
 section plane.
 
-Not done yet: angle measurement, an off-axis section plane, markup, and loading
-anything other than the bundled sample.
+Uploads a CAD file straight to object storage, records it, and opens the
+converted result once the worker has finished with it.
+
+Not done yet: authentication (everything is attributed to one development
+user), projects UI, search and filtering, angle measurement, an off-axis
+section plane, and markup.
