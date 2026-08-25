@@ -239,15 +239,27 @@ kullanıcıya presigned indirme linki ile verilir.
 
 | Yöntem | Yol | Açıklama |
 |---|---|---|
-| `POST` | `/api/uploads/presign` | Yükleme için presigned PUT URL üretir |
-| `POST` | `/api/models` | Model + ilk versiyon kaydı, `status=queued` |
-| `POST` | `/api/models/:id/versions` | Yeni revizyon |
-| `GET` | `/api/models/:id` | Meta veri + versiyon listesi |
+| `GET` | `/api/models` | Modelleri versiyonlarıyla listeler |
+| `POST` | `/api/models` | Model ve ilk versiyonu oluşturur, presigned PUT URL döner |
+| `GET` | `/api/models/:id` | Tek model + versiyon listesi |
+| `POST` | `/api/models/:id/versions` | Yeni revizyon, presigned PUT URL ile |
+| `POST` | `/api/versions/:id/uploaded` | İstemci yüklemenin bittiğini bildirir, versiyon kuyruğa girer |
 | `GET` | `/api/versions/:id/assets` | glb / metadata / thumb için presigned GET |
-| `GET` | `/api/models?q=&format=&project=` | Arama ve filtre |
-| `POST` | `/api/versions/:id/annotations` | 3B markup |
 
-Converter servisi dışa açık değildir; yalnızca DB ve R2 ile konuşur.
+Yükleme tek adım değil, üç adım. Kayıt dosyadan önce oluşturulur çünkü
+yüklemenin yazacağı bir anahtara ihtiyacı var; istemci onaylayana kadar
+`uploading` durumunda kalır, böylece yarım kalmış bir yükleme converter'a hiç
+verilmez. Ayrı bir presign uç noktası yok: URL yalnızca ait olduğu kayıtla
+birlikte üretilir, yani kimse rastgele bir anahtar için imzalı URL
+isteyemez.
+
+Arama/filtre ve markup uç noktası henüz yok.
+
+Converter servisi dışa açık değildir; yalnızca DB ve depolama ile konuşur.
+İşi `UPDATE ... WHERE id = (SELECT ... FOR UPDATE SKIP LOCKED LIMIT 1)` ile
+alır — broker olmadan birden fazla worker için doğru bir kuyruk — ve zaman
+aşımını geçen `processing` kayıtları kuyruğa geri koyar; çökmüş bir worker'ın
+işi böyle geri gelir.
 
 ---
 

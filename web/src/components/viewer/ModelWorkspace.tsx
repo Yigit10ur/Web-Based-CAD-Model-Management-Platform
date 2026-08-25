@@ -10,19 +10,15 @@ import { PropertiesPanel } from './PropertiesPanel';
 import { Toolbar } from './Toolbar';
 import { Viewer } from './Viewer';
 
-/**
- * Development sample, produced by the converter:
- *
- *   python -m app.cli convert tests/fixtures/assembly.step \
- *       ../web/public/samples/assembly.glb
- *
- * Replaced by presigned URLs from the API once model storage exists.
- */
-const MODEL_URL = '/samples/assembly.glb';
-const METADATA_URL = '/samples/assembly.json';
+interface Props {
+  /** Presigned URL for the converted .glb, or a path under /public. */
+  modelUrl: string;
+  /** Presigned URL for the matching metadata.json. */
+  metadataUrl: string;
+}
 
-export function ModelWorkspace() {
-  const { metadata, error } = useModelMetadata(METADATA_URL);
+export function ModelWorkspace({ modelUrl, metadataUrl }: Props) {
+  const { metadata, error } = useModelMetadata(metadataUrl);
 
   // Escape abandons a measurement in progress, then leaves the tool. Two
   // presses rather than one so a mis-click does not also cost the tool.
@@ -63,7 +59,7 @@ export function ModelWorkspace() {
       <AssemblyTree metadata={metadata} />
       <div className="relative min-w-0 flex-1">
         <Toolbar />
-        <Viewer url={MODEL_URL} metadata={metadata} />
+        <Viewer url={modelUrl} metadata={metadata} />
       </div>
       <PropertiesPanel metadata={metadata} />
     </div>

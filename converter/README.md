@@ -32,9 +32,18 @@ docker run --rm -p 8000:8000 cad-converter
 ## Running
 
 ```bash
-uvicorn app.main:app --reload      # http://localhost:8000/health
+python -m app.worker               # the conversion queue
+uvicorn app.main:app --reload      # health endpoints, http://localhost:8000
 python -m app.cli convert samples/bracket.step out/bracket.glb
 ```
+
+The worker polls the database for queued versions, converts them and writes
+`model.glb` and `metadata.json` back to object storage next to the source file.
+It reads the same environment variables as the web application, so one
+`.env` configures both — see `../web/.env.example`.
+
+Two processes on purpose: a long conversion must not block the health endpoint
+the platform uses to decide whether the service is alive.
 
 `GET /ready` reports whether OCCT is importable in the current environment. A
 container that answers `/health` but fails `/ready` will accept jobs and fail
@@ -65,5 +74,5 @@ colours, exact mass properties from the B-rep, face groups, edges shipped in
 the same `.glb` as LINES primitives, and a `snap` block of exact vertices,
 edge definitions and face parameters for the viewer's measurement tool.
 
-Not done yet: the mesh path (`.stl` / `.obj`), Draco compression, thumbnail
-rendering, and the worker loop that polls the database for queued jobs.
+Not done yet: the mesh path (`.stl` / `.obj`), Draco compression and thumbnail
+rendering.

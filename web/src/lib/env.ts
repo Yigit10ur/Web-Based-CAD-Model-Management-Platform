@@ -1,0 +1,39 @@
+/**
+ * Environment configuration, validated once at import.
+ *
+ * Failing here with a named variable beats failing later with a connection
+ * error that says nothing about which value was missing.
+ */
+
+import { z } from 'zod';
+
+const schema = z.object({
+  DATABASE_URL: z.string().min(1, 'DATABASE_URL is not set'),
+
+  STORAGE_ENDPOINT: z.string().url(),
+  STORAGE_REGION: z.string().default('auto'),
+  STORAGE_BUCKET: z.string().min(1),
+  STORAGE_ACCESS_KEY_ID: z.string().min(1),
+  STORAGE_SECRET_ACCESS_KEY: z.string().min(1),
+
+  /** How long presigned upload and download links stay valid. */
+  STORAGE_URL_TTL_SECONDS: z.coerce.number().int().positive().default(900),
+  MAX_UPLOAD_MB: z.coerce.number().int().positive().default(200),
+});
+
+let cached: z.infer<typeof schema> | null = null;
+
+export function env() {
+  if (cached) return cached;
+
+  const parsed = schema.safeParse(process.env);
+  if (!parsed.success) {
+    const missing = parsed.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('\n  ');
+    throw new Error(`Environment is not configured:\n  ${missing}\n\nSee .env.example.`);
+  }
+
+  cached = parsed.data;
+  return cached;
+}

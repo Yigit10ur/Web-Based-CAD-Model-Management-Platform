@@ -12,6 +12,11 @@ dependencies = [
     # imports it at module level and the API imports that module for its
     # readiness check, so the service must be able to load it without OCCT.
     "numpy>=2.0",
+    # The worker talks to the same Postgres and object storage the web app
+    # uses. Both are in the base install because the worker module imports
+    # them at load time and CI must be able to import it without OCCT.
+    "psycopg[binary]>=3.2",
+    "boto3>=1.35",
 ]
 
 [project.optional-dependencies]
