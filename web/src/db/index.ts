@@ -1,3 +1,4 @@
+import { PgDatabase } from 'drizzle-orm/pg-core';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
@@ -49,19 +50,23 @@ function instance(): Database {
  * A proxy so that call sites read as `db.query.models.findMany(...)` while the
  * connection is still only opened when one of them actually runs.
  */
-export const db = new Proxy({} as Database, {
+/**
+ * The proxy target inherits from PgDatabase rather than from Object.
+ *
+ * Drizzle identifies a dialect by walking the prototype chain, and libraries
+ * built on it do the same -- the Auth.js adapter refuses a database it cannot
+ * classify, and it asks the moment `auth.ts` is imported. Answering that from
+ * a real connection would drag the environment back into module load and fail
+ * every build without a database. Borrowing the prototype answers the question
+ * truthfully without opening anything.
+ */
+const target = Object.create(PgDatabase.prototype) as Database;
+
+export const db = new Proxy(target, {
   get(_target, property) {
     const database = instance();
     const value = Reflect.get(database, property, database);
     return typeof value === 'function' ? value.bind(database) : value;
-  },
-
-  // Drizzle identifies which dialect an instance belongs to by walking its
-  // prototype chain, and libraries built on it do the same -- the Auth.js
-  // adapter refuses a database it cannot classify. Without this trap it would
-  // be classifying the empty object standing in as the proxy target.
-  getPrototypeOf() {
-    return Object.getPrototypeOf(instance());
   },
 });
 
