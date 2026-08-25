@@ -307,6 +307,7 @@ which is how a crashed worker's job comes back.
 | The Dockerfile has never been built | Local development works without it, so the image is unverified. Left until deployment week it will surprise you; build it once during week 3. |
 | Very large STEP files | Scale deflection with the bounding box, cap the triangle budget, enforce a file size limit. |
 | ~~Measurement accuracy~~ | **Solved.** The converter emits a `snap` block (vertices, edges, face definitions) and the viewer snaps measurements to it rather than to the mesh. A corner-to-corner measurement across the 40×20 plate reads 44.72 mm. |
+| ~~No tests on the access rules~~ | **Closed.** The rules run against PGlite in CI; deliberately breaking two of them was confirmed to fail the suite. |
 | Scope creep | Catalogue/social features (likes, follows, feeds) are out of scope; the value is in the viewer. |
 
 ---

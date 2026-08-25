@@ -39,8 +39,15 @@ npm run db:studio     # browse the data
 ```bash
 npm run lint
 npm run typecheck
+npm test
 npm run build
 ```
+
+Tests run against Postgres compiled to WebAssembly (PGlite), in process. The
+access rules are expressed as SQL, so they are tested by running that SQL --
+no container, no credentials, and nothing for CI to hold. `tests/db.ts` applies
+the same migrations the real database does, so a schema change that breaks them
+breaks the tests too.
 
 ## Layout
 
