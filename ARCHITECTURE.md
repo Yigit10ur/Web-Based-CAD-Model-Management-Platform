@@ -284,7 +284,12 @@ işi böyle geri gelir.
 
 ## 9. Kapsam dışı (MVP)
 
-- **Native CAD formatları** (SLDPRT, CATPart, .prt, .ipt). Açık kaynak
+- **Native CAD formatları** — parçalar ve montajlar (`.ipt`/`.iam`,
+  `.sldprt`/`.sldasm`, `.catpart`/`.catproduct`, `.prt`/`.asm`) ve teknik
+  resimler (`.idw`, `.slddrw`, `.catdrawing`, `.dwg`, `.dxf`). Her biri
+  yüklemede, ne yapılması gerektiğini söyleyen bir mesajla reddedilir; teknik
+  resme "kendini dışa aktar" denmez, belgelediği modeli yüklemesi söylenir —
+  çünkü bir resmin dışa aktarılacak katısı yoktur. Açık kaynak
   çözümü yoktur; CAD Exchanger / HOOPS / Datakit gibi ticari SDK gerekir.
   MVP formatları: **STEP, STL, glTF/GLB**, vakit kalırsa IGES.
 - Gerçek zamanlı çok kullanıcılı oturum (birlikte gezinme).
