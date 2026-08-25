@@ -1,10 +1,12 @@
+import { desc, inArray } from 'drizzle-orm';
 import Link from 'next/link';
-import { desc, eq } from 'drizzle-orm';
+import { redirect } from 'next/navigation';
 
 import { ModelList, type ModelWithVersions } from '@/components/catalogue/ModelList';
 import { UploadForm } from '@/components/catalogue/UploadForm';
+import { SignOutButton } from '@/components/auth/SignOutButton';
 import { db, schema } from '@/db';
-import { getSession } from '@/lib/session';
+import { currentUser, personalProject, readableProjects } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,11 +16,15 @@ export const dynamic = 'force-dynamic';
  * Reads the database directly rather than through the API: it is a server
  * component in the same process, and the round trip would buy nothing.
  */
-async function loadModels(): Promise<ModelWithVersions[]> {
-  const session = await getSession();
+async function loadModels(userId: string): Promise<ModelWithVersions[]> {
+  // Make sure the user has somewhere to upload to, then list everything they
+  // can read -- not just that one project, or a model shared with them would
+  // be openable by URL but invisible in the catalogue.
+  await personalProject(userId);
+  const projectIds = await readableProjects(userId);
 
   return db.query.models.findMany({
-    where: eq(schema.models.projectId, session.projectId),
+    where: inArray(schema.models.projectId, projectIds),
     orderBy: [desc(schema.models.createdAt)],
     with: { versions: { orderBy: [desc(schema.modelVersions.versionNo)] } },
   });
@@ -48,15 +54,33 @@ function NotConfigured({ detail }: { detail: string }) {
   );
 }
 
-export default async function Home() {
-  let models: ModelWithVersions[];
+function describe(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
+}
 
+export default async function Home() {
+  // redirect() reports itself by throwing, so it stays outside every try
+  // block: caught, it would turn "please sign in" into "not configured".
+  let user: Awaited<ReturnType<typeof currentUser>>;
   try {
-    models = await loadModels();
+    user = await currentUser();
   } catch (cause) {
     return (
       <main className="min-h-dvh bg-slate-50">
-        <NotConfigured detail={cause instanceof Error ? cause.message : String(cause)} />
+        <NotConfigured detail={describe(cause)} />
+      </main>
+    );
+  }
+
+  if (!user) redirect('/sign-in');
+
+  let models: ModelWithVersions[];
+  try {
+    models = await loadModels(user.id);
+  } catch (cause) {
+    return (
+      <main className="min-h-dvh bg-slate-50">
+        <NotConfigured detail={describe(cause)} />
       </main>
     );
   }
@@ -66,9 +90,12 @@ export default async function Home() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
           <h1 className="text-base font-medium text-slate-900">CAD Models</h1>
-          <Link href="/sample" className="text-xs text-slate-500 hover:underline">
-            sample
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/sample" className="text-xs text-slate-500 hover:underline">
+              sample
+            </Link>
+            <SignOutButton email={user.email} />
+          </div>
         </div>
       </header>
 

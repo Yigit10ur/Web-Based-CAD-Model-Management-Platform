@@ -16,6 +16,17 @@ const schema = z.object({
   STORAGE_ACCESS_KEY_ID: z.string().min(1),
   STORAGE_SECRET_ACCESS_KEY: z.string().min(1),
 
+  /**
+   * Auth.js signing secret. Generate one with `npx auth secret`.
+   *
+   * Required in production; in development Auth.js falls back to an
+   * insecure default, which is fine for a machine that only ever signs in
+   * the developer.
+   */
+  AUTH_SECRET: z.string().min(1).optional(),
+  AUTH_GITHUB_ID: z.string().optional(),
+  AUTH_GITHUB_SECRET: z.string().optional(),
+
   /** How long presigned upload and download links stay valid. */
   STORAGE_URL_TTL_SECONDS: z.coerce.number().int().positive().default(900),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(200),

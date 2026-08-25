@@ -21,9 +21,10 @@ object storage.
 
 | Path | Needs |
 |---|---|
-| `/` | Catalogue and upload — database, storage |
-| `/models/:id` | Viewer for a converted model — database, storage |
-| `/sample` | Viewer on the bundled sample — nothing |
+| `/` | Catalogue and upload — signed in |
+| `/models/:id` | Viewer for a converted model — signed in, and allowed to read it |
+| `/sign-in` | GitHub, plus a password-less local sign-in on development builds |
+| `/sample` | Viewer on the bundled sample — no database, storage or account |
 
 ## Database
 
@@ -83,6 +84,6 @@ section plane.
 Uploads a CAD file straight to object storage, records it, and opens the
 converted result once the worker has finished with it.
 
-Not done yet: authentication (everything is attributed to one development
-user), projects UI, search and filtering, angle measurement, an off-axis
-section plane, and markup.
+Not done yet: a projects UI (everyone gets one personal project), sharing a
+project with another user, search and filtering, angle measurement, an
+off-axis section plane, and markup.
