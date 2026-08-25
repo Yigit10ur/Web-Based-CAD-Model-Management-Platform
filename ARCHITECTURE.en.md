@@ -68,6 +68,13 @@ flowchart LR
   image is for deployment (see the note below)
 - **OCCT bindings**: `cadquery-ocp` (pip) — alternatively `pythonocc-core` (conda)
 
+  > **Note on the Supabase pooler.** Both services disable prepared statements
+  > (`prepare: false` in postgres-js, `prepare_threshold = None` in psycopg).
+  > The transaction pooler hands consecutive statements to different backend
+  > sessions, so a driver that silently promotes a repeated query to a prepared
+  > statement fails with `prepared statement "_pg3_0" already exists` -- which
+  > is what happened the first time the worker ran.
+
   > **Verified 2026-08-24.** `cadquery-ocp` 7.9.3.1.1 installed cleanly with
   > pip on macOS arm64 / Python 3.12; a STEP write/read round trip, exact mass
   > properties, tessellation and edge extraction all produced correct results.

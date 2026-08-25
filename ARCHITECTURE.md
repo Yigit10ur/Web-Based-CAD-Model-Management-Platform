@@ -65,6 +65,13 @@ flowchart LR
   deploy içindir (aşağıdaki nota bakınız)
 - **OCCT bindings**: `cadquery-ocp` (pip) — alternatif `pythonocc-core` (conda)
 
+  > **Supabase pooler notu.** İki servis de prepared statement'ları kapatıyor
+  > (postgres-js'te `prepare: false`, psycopg'de `prepare_threshold = None`).
+  > Transaction pooler ardışık sorguları farklı backend oturumlarına dağıttığı
+  > için, tekrarlanan bir sorguyu sessizce prepared statement'a çeviren bir
+  > sürücü `prepared statement "_pg3_0" already exists` ile düşüyor — worker
+  > ilk çalıştığında tam olarak bu oldu.
+
   > **Doğrulandı (2026-08-24).** `cadquery-ocp` 7.9.3.1.1, macOS arm64 /
   > Python 3.12 ortamına pip ile sorunsuz kuruldu; STEP yaz/oku turu, exact
   > kütle özellikleri, tessellation ve kenar çıkarma doğru sonuç verdi.

@@ -9,7 +9,14 @@ class Settings(BaseSettings):
     the pair and there is no second set of names to keep in step.
     """
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # In development the values live in the web application's .env.local,
+    # because that is the file Next.js reads and there is no reason to keep a
+    # second copy in step. A converter/.env wins if it exists, and real
+    # environment variables win over both, which is how deployment supplies
+    # them.
+    model_config = SettingsConfigDict(
+        env_file=("../web/.env.local", ".env"), extra="ignore"
+    )
 
     database_url: str = ""
 

@@ -74,7 +74,17 @@ WHERE id = %s
 def connect() -> psycopg.Connection:
     if not settings.database_url:
         raise RuntimeError("DATABASE_URL is not set; see .env.example")
-    return psycopg.connect(settings.database_url, row_factory=dict_row, autocommit=True)
+
+    conn = psycopg.connect(settings.database_url, row_factory=dict_row, autocommit=True)
+
+    # psycopg promotes a repeated query to a prepared statement on its own,
+    # which breaks against a transaction pooler: the pooler hands the next
+    # statement to a different backend session, where that prepared name
+    # either does not exist or already belongs to something else. The web
+    # application disables them for the same reason.
+    conn.prepare_threshold = None
+
+    return conn
 
 
 def requeue_stale(conn: psycopg.Connection) -> int:

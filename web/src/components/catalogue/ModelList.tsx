@@ -16,6 +16,12 @@ const STATUS_STYLE: Record<ModelVersion['status'], string> = {
   failed: 'bg-red-100 text-red-800',
 };
 
+/** Kilobytes below a megabyte: a 39 KB fixture reading "0.0 MB" is useless. */
+function formatSize(bytes: number): string {
+  const megabytes = bytes / 1024 / 1024;
+  return megabytes < 1 ? `${Math.round(bytes / 1024)} KB` : `${megabytes.toFixed(1)} MB`;
+}
+
 function Status({ version }: { version: ModelVersion }) {
   return (
     <span
@@ -77,7 +83,7 @@ export function ModelList({ models }: { models: ModelWithVersions[] }) {
               <p className="truncate text-xs text-slate-400">
                 {model.versions.length} version{model.versions.length === 1 ? '' : 's'}
                 {latest && ` · ${latest.sourceFormat.toUpperCase()}`}
-                {latest && ` · ${(latest.sourceSizeBytes / 1024 / 1024).toFixed(1)} MB`}
+                {latest && ` · ${formatSize(latest.sourceSizeBytes)}`}
                 {latest?.errorMessage && ` · ${latest.errorMessage}`}
               </p>
             </div>
