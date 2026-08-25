@@ -23,6 +23,11 @@ __pycache__/
 .DS_Store
 *.swp
 
+# Local tooling. The dev server configuration is per-machine: it names the
+# command and port this checkout runs on, which is not something to impose on
+# anyone else's clone.
+.claude/
+
 # Large CAD binaries are not committed (see CONTRIBUTING.md).
 # Small, appropriately licensed test fixtures are the exception.
 *.step
