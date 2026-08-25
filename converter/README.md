@@ -74,5 +74,10 @@ colours, exact mass properties from the B-rep, face groups, edges shipped in
 the same `.glb` as LINES primitives, and a `snap` block of exact vertices,
 edge definitions and face parameters for the viewer's measurement tool.
 
-Not done yet: the mesh path (`.stl` / `.obj`), Draco compression and thumbnail
-rendering.
+Mesh files (`.stl`, `.obj`, `.ply`, glTF) go through a second path that
+measures rather than computes: volume only when the mesh is watertight, no
+face groups and no snap targets, and creases derived from the angle between
+adjacent triangles in place of B-rep edges. `geometry_source` in the metadata
+says which path a model came through.
+
+Not done yet: Draco compression and thumbnail rendering.

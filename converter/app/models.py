@@ -24,9 +24,14 @@ class TreeNode(BaseModel):
 
 
 class PartMetadata(BaseModel):
-    """Exact properties computed from B-rep topology, not from the mesh."""
+    """Mass properties of one part.
 
-    volume_mm3: float
+    Exact when the source was a B-rep. A mesh source can only be measured, and
+    a mesh that is not watertight encloses no volume at all -- hence the
+    optional volume rather than a confident wrong number.
+    """
+
+    volume_mm3: float | None
     area_mm2: float
     com: Vec3
     bbox: BBox
@@ -75,6 +80,16 @@ class SnapGeometry(BaseModel):
 
 
 class ModelMetadata(BaseModel):
+    """What the viewer knows about a model.
+
+    `geometry_source` is the honest label on everything else here. A `brep`
+    model carries exact mass properties, face groups and snap targets; a `mesh`
+    model carries measured properties and no snap data at all, because a
+    triangle corner is not a design intent and pretending otherwise would put a
+    wrong number in front of someone reading a dimension.
+    """
+
+    geometry_source: Literal["brep", "mesh"] = "brep"
     tree: list[TreeNode]
     parts: dict[str, PartMetadata]
     units: str = "mm"
@@ -85,6 +100,9 @@ class ModelMetadata(BaseModel):
     # Part id -> exact vertices, edges and face definitions for measurement
     # snapping. See ARCHITECTURE.md section 10: measurements are snapped to
     # this, never to the mesh.
+    # Present only for a B-rep source. Absent means the viewer falls back to
+    # the raw point under the cursor, which is the correct behaviour for a
+    # mesh: there is nothing exact to snap to.
     snap: dict[str, SnapGeometry] = Field(default_factory=dict)
 
 

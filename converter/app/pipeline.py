@@ -49,4 +49,6 @@ def convert(source: Path, out_glb: Path) -> ConversionResult:
         # is not known until the file has been read.
         return occt.convert(source, out_glb)
 
-    raise NotImplementedError(f"mesh path not implemented yet: {suffix}")
+    from app.cad import mesh
+
+    return mesh.convert(source, out_glb)

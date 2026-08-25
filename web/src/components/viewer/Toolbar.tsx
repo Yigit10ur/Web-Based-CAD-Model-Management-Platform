@@ -1,5 +1,6 @@
 'use client';
 
+import type { GeometrySource } from '@/lib/metadata';
 import { useViewerStore, type ViewerTool } from '@/store/viewer-store';
 
 const TOOLS: { id: ViewerTool; label: string; hint: string }[] = [
@@ -7,7 +8,7 @@ const TOOLS: { id: ViewerTool; label: string; hint: string }[] = [
   { id: 'measure', label: 'Measure', hint: 'Click two points; Esc cancels' },
 ];
 
-export function Toolbar() {
+export function Toolbar({ source }: { source: GeometrySource }) {
   const tool = useViewerStore((state) => state.tool);
   const setTool = useViewerStore((state) => state.setTool);
   const active = TOOLS.find((entry) => entry.id === tool);
@@ -34,6 +35,15 @@ export function Toolbar() {
       <span className="rounded bg-white/80 px-2 py-1 text-[11px] text-slate-500">
         {active?.hint}
       </span>
+
+      {/* A mesh has nothing exact to snap to, so measurements land wherever
+          the cursor did. Saying so up front beats letting someone read a
+          dimension off it and trust it. */}
+      {source === 'mesh' && tool === 'measure' && (
+        <span className="rounded bg-amber-100 px-2 py-1 text-[11px] text-amber-800">
+          Mesh source — no snapping, measurements are approximate
+        </span>
+      )}
     </div>
   );
 }

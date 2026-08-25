@@ -34,6 +34,7 @@ export function PropertiesPanel({ metadata }: { metadata: ModelMetadata }) {
 
   const part = selected ? metadata.parts[selected] : null;
   const faceCount = selected ? (metadata.face_groups[selected]?.length ?? 0) : 0;
+  const fromBrep = metadata.geometry_source !== 'mesh';
 
   const name = (() => {
     let found: string | null = null;
@@ -96,7 +97,14 @@ export function PropertiesPanel({ metadata }: { metadata: ModelMetadata }) {
             <p className="truncate pb-2 text-sm font-medium text-slate-900">{name ?? selected}</p>
 
             <dl className="divide-y divide-slate-100">
-              <Row label="Volume" value={`${format(part.volume_mm3)} mm³`} />
+              <Row
+                label="Volume"
+                value={
+                  part.volume_mm3 === null
+                    ? 'not enclosed'
+                    : `${format(part.volume_mm3)} mm³`
+                }
+              />
               <Row label="Surface area" value={`${format(part.area_mm2)} mm²`} />
               <Row
                 label="Centre of mass"
@@ -108,17 +116,24 @@ export function PropertiesPanel({ metadata }: { metadata: ModelMetadata }) {
                   .map((high, axis) => format(high - part.bbox[0][axis], 1))
                   .join(' × ')}
               />
-              <Row label="B-rep faces" value={String(faceCount)} />
-              <Row
-                label="Picked face"
-                value={selectedFace === null ? '—' : `#${selectedFace}`}
-              />
+              {fromBrep && (
+                <>
+                  <Row label="B-rep faces" value={String(faceCount)} />
+                  <Row
+                    label="Picked face"
+                    value={selectedFace === null ? '—' : `#${selectedFace}`}
+                  />
+                </>
+              )}
             </dl>
 
-            {/* Volume and area come from the B-rep, not from the triangles on
-                screen, so they stay exact regardless of tessellation quality. */}
+            {/* What these numbers are worth depends entirely on what was
+                uploaded, so the panel says which it is rather than letting the
+                reader assume the stronger one. */}
             <p className="pt-3 text-xs leading-relaxed text-slate-400">
-              Exact values from the B-rep, not measured off the mesh.
+              {fromBrep
+                ? 'Exact values from the B-rep, not measured off the mesh.'
+                : 'Measured from the mesh. A mesh file carries no exact geometry, so these are as accurate as its triangles.'}
             </p>
           </>
         ) : (
