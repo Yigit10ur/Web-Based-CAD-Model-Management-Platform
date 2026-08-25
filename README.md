@@ -94,8 +94,7 @@ inspect it.
 
 Not built yet: markup, angle measurement, an off-axis section plane, search and
 filtering, thumbnails, a projects and sharing interface, and the mesh import
-path (`.stl` / `.obj`). The web application has no automated tests, which is
-the largest gap.
+path (`.stl` / `.obj`). Nothing is deployed yet, so there is no live URL.
 
 ## Contributing
 
@@ -199,8 +198,8 @@ incele.
 
 Henüz yok: markup, açı ölçümü, eksen dışı kesit düzlemi, arama ve filtreleme,
 küçük resim üretimi, proje ve paylaşım arayüzü, mesh içe aktarma yolu
-(`.stl` / `.obj`). Web uygulamasında otomatik test bulunmuyor; en büyük eksik
-budur.
+(`.stl` / `.obj`). Hiçbir yere deploy edilmedi, dolayısıyla canlı bir adres
+yok.
 
 ### Katkı
 

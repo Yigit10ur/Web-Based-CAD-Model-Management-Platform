@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   web:
-    name: web (lint, typecheck, build)
+    name: web (lint, typecheck, test, build)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -28,6 +28,9 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      # The access rules are tested against Postgres compiled to WebAssembly,
+      # so this needs no service container and no credentials.
+      - run: npm test
       - run: npm run build
 
   converter:
