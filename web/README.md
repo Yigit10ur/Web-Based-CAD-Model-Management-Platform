@@ -89,7 +89,9 @@ point-to-point measurement that snaps to exact CAD geometry, and a capped
 section plane.
 
 Uploads a CAD file straight to object storage, records it, and opens the
-converted result once the worker has finished with it.
+converted result once the worker has finished with it. A model can be given a
+new revision from its own page; the previous version keeps its files and stays
+selectable.
 
 Not done yet: a projects UI (everyone gets one personal project), sharing a
 project with another user, search and filtering, angle measurement, an

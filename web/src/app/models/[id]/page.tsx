@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
+import { RevisionUpload } from '@/components/catalogue/RevisionUpload';
 import { ModelWorkspace } from '@/components/viewer/ModelWorkspace';
 import { currentUser, readableModel } from '@/lib/session';
 import { presignDownload } from '@/lib/storage';
@@ -27,6 +28,10 @@ export default async function ModelPage({ params, searchParams }: Props) {
 
   const versions = [...model.versions].sort((a, b) => b.versionNo - a.versionNo);
 
+  const converting = versions.some(
+    (candidate) => candidate.status === 'queued' || candidate.status === 'processing',
+  );
+
   const version = v
     ? versions.find((candidate) => candidate.id === v)
     : versions.find((candidate) => candidate.status === 'ready');
@@ -50,10 +55,17 @@ export default async function ModelPage({ params, searchParams }: Props) {
                 <Link
                   key={candidate.id}
                   href={`/models/${model.id}?v=${candidate.id}`}
+                  title={
+                    candidate.status === 'ready'
+                      ? undefined
+                      : `version ${candidate.versionNo} is ${candidate.status}`
+                  }
                   className={`rounded px-1.5 py-0.5 ${
                     candidate.id === version?.id
                       ? 'bg-blue-600 text-white'
-                      : 'text-slate-500 hover:bg-slate-100'
+                      : candidate.status === 'ready'
+                        ? 'text-slate-500 hover:bg-slate-100'
+                        : 'text-slate-300 hover:bg-slate-100'
                   }`}
                 >
                   v{candidate.versionNo}
@@ -61,7 +73,10 @@ export default async function ModelPage({ params, searchParams }: Props) {
               ))}
             </nav>
           )}
-          <span>{version?.sourceFormat.toUpperCase()}</span>
+
+          {version && <span>{version.sourceFormat.toUpperCase()}</span>}
+
+          <RevisionUpload modelId={model.id} converting={converting} />
         </div>
       </header>
 
