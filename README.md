@@ -19,7 +19,9 @@ comes from the B-rep the CAD file actually contains.
 - Assembly tree with the part names and colours from the source file
 - Selection down to a single B-rep face, not just a part
 - Exact volume, surface area, centre of mass and bounding box — computed from
-  the B-rep, never measured off the triangles
+  the B-rep, never measured off the triangles. A mesh upload is labelled as
+  measured instead, and the viewer says so rather than letting the numbers
+  pass for exact
 - Point-to-point measurement that snaps to real vertices and edges; a circular
   edge reports the diameter from its CAD definition rather than from the
   polygon approximating it
@@ -93,8 +95,8 @@ Working end to end: sign in, upload a STEP file, watch it convert, open it and
 inspect it.
 
 Not built yet: markup, angle measurement, an off-axis section plane, search and
-filtering, thumbnails, a projects and sharing interface, and the mesh import
-path (`.stl` / `.obj`). Nothing is deployed yet, so there is no live URL.
+filtering, thumbnails, and a projects and sharing interface. Nothing is
+deployed yet, so there is no live URL.
 
 ## Contributing
 
@@ -125,7 +127,9 @@ raporlanan her sayı dosyanın gerçekten içerdiği B-rep'ten gelir.
 - Kaynak dosyadan gelen parça isimleri ve renkleriyle montaj ağacı
 - Yalnızca parça değil, tek bir B-rep yüzeyine kadar seçim
 - Exact hacim, yüzey alanı, ağırlık merkezi ve sınır kutusu — B-rep'ten
-  hesaplanır, üçgenlerden ölçülmez
+  hesaplanır, üçgenlerden ölçülmez. Mesh yüklemesi "ölçülmüş" olarak
+  etiketlenir ve viewer bunu açıkça söyler, sayıların exact sanılmasına izin
+  vermez
 - Gerçek köşe ve kenarlara snap olan nokta-nokta ölçüm; çember bir kenar,
   kendisini yaklaştıran çokgenden değil CAD tanımından gelen çapı bildirir
 - Stencil ile kapatılmış kesit düzlemi — kesilen katı, boş bir kabuk değil
@@ -197,9 +201,8 @@ Uçtan uca çalışıyor: giriş yap, STEP dosyası yükle, dönüşmesini izle,
 incele.
 
 Henüz yok: markup, açı ölçümü, eksen dışı kesit düzlemi, arama ve filtreleme,
-küçük resim üretimi, proje ve paylaşım arayüzü, mesh içe aktarma yolu
-(`.stl` / `.obj`). Hiçbir yere deploy edilmedi, dolayısıyla canlı bir adres
-yok.
+küçük resim üretimi, proje ve paylaşım arayüzü. Hiçbir yere deploy edilmedi,
+dolayısıyla canlı bir adres yok.
 
 ### Katkı
 

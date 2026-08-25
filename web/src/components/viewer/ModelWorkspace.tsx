@@ -58,7 +58,7 @@ export function ModelWorkspace({ modelUrl, metadataUrl }: Props) {
     <div className="flex min-h-0 flex-1">
       <AssemblyTree metadata={metadata} />
       <div className="relative min-w-0 flex-1">
-        <Toolbar />
+        <Toolbar source={metadata.geometry_source} />
         <Viewer url={modelUrl} metadata={metadata} />
       </div>
       <PropertiesPanel metadata={metadata} />

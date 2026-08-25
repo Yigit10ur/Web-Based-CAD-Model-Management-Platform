@@ -17,6 +17,10 @@ dependencies = [
     # them at load time and CI must be able to import it without OCCT.
     "psycopg[binary]>=3.2",
     "boto3>=1.35",
+    # The mesh import path is core functionality, not part of the optional CAD
+    # toolchain: STL and OBJ need no OCCT. Keeping trimesh in the base install
+    # is what lets CI run those tests.
+    "trimesh>=4.5",
 ]
 
 [project.optional-dependencies]
@@ -26,7 +30,6 @@ dependencies = [
 # local dev environment once the week-1 spike lands.
 cad = [
     "cadquery-ocp>=7.7",
-    "trimesh>=4.5",
 ]
 dev = [
     "pytest>=8.3",

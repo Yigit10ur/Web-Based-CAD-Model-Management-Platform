@@ -19,7 +19,8 @@ export interface TreeNode {
 }
 
 export interface PartMetadata {
-  volume_mm3: number;
+  /** Null when the source was a mesh that is not watertight: it encloses nothing. */
+  volume_mm3: number | null;
   area_mm2: number;
   com: Vec3;
   bbox: BBox;
@@ -52,7 +53,17 @@ export interface SnapGeometry {
   faces: FaceGeometry[];
 }
 
+/**
+ * Where the geometry came from, and therefore how much the numbers mean.
+ *
+ * `brep` carries exact mass properties, face groups and snap targets. `mesh`
+ * carries measured properties and no snap data — a triangle corner is a
+ * tessellation artefact, not a design intent.
+ */
+export type GeometrySource = 'brep' | 'mesh';
+
 export interface ModelMetadata {
+  geometry_source: GeometrySource;
   tree: TreeNode[];
   parts: Record<string, PartMetadata>;
   units: string;
