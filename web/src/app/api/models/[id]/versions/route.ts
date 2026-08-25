@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { db, schema } from '@/db';
 import { env } from '@/lib/env';
 import { extensionOf, formatOf, rejectionReason } from '@/lib/formats';
-import { getSession } from '@/lib/session';
+import { currentUser, writableModel } from '@/lib/session';
 import { presignUpload, storageKeys } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
@@ -18,6 +18,9 @@ const bodySchema = z.object({
 
 /** Add a revision. The previous version keeps its own files and stays viewable. */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: 'not signed in' }, { status: 401 });
+
   const { id } = await params;
 
   const body = bodySchema.safeParse(await request.json());
@@ -37,10 +40,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     );
   }
 
-  const model = await db.query.models.findFirst({ where: eq(schema.models.id, id) });
+  // A revision is a write, so membership has to allow writing -- a viewer on
+  // a shared project may open a model but not push a new version of it.
+  const model = await writableModel(id, user.id);
   if (!model) return NextResponse.json({ error: 'not found' }, { status: 404 });
-
-  const session = await getSession();
 
   const [latest] = await db
     .select({ versionNo: schema.modelVersions.versionNo })
@@ -57,7 +60,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       sourceKey: '',
       sourceFormat: formatOf(filename),
       sourceSizeBytes: sizeBytes,
-      createdBy: session.userId,
+      createdBy: user.id,
     })
     .returning();
 

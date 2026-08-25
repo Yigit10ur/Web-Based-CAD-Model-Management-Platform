@@ -1,11 +1,11 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { db, schema } from '@/db';
 import { env } from '@/lib/env';
 import { extensionOf, formatOf, rejectionReason } from '@/lib/formats';
-import { getSession } from '@/lib/session';
+import { currentUser, personalProject, readableProjects } from '@/lib/session';
 import { presignUpload, storageKeys } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
@@ -18,17 +18,19 @@ const createSchema = z.object({
   sizeBytes: z.number().int().positive(),
 });
 
+const unauthorized = () => NextResponse.json({ error: 'not signed in' }, { status: 401 });
+
 export async function GET() {
-  const session = await getSession();
+  const user = await currentUser();
+  if (!user) return unauthorized();
+
+  await personalProject(user.id);
+  const projectIds = await readableProjects(user.id);
 
   const rows = await db.query.models.findMany({
-    where: eq(schema.models.projectId, session.projectId),
+    where: inArray(schema.models.projectId, projectIds),
     orderBy: [desc(schema.models.createdAt)],
-    with: {
-      versions: {
-        orderBy: [desc(schema.modelVersions.versionNo)],
-      },
-    },
+    with: { versions: { orderBy: [desc(schema.modelVersions.versionNo)] } },
   });
 
   return NextResponse.json({ models: rows });
@@ -42,6 +44,9 @@ export async function GET() {
  * upload out of the converter's queue.
  */
 export async function POST(request: Request) {
+  const user = await currentUser();
+  if (!user) return unauthorized();
+
   const body = createSchema.safeParse(await request.json());
   if (!body.success) {
     return NextResponse.json({ error: body.error.issues }, { status: 400 });
@@ -60,11 +65,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const session = await getSession();
+  const projectId = await personalProject(user.id);
 
   const [model] = await db
     .insert(schema.models)
-    .values({ projectId: session.projectId, name, description })
+    .values({ projectId, name, description })
     .returning();
 
   const [version] = await db
@@ -75,16 +80,11 @@ export async function POST(request: Request) {
       sourceKey: '',
       sourceFormat: formatOf(filename),
       sourceSizeBytes: sizeBytes,
-      createdBy: session.userId,
+      createdBy: user.id,
     })
     .returning();
 
-  const sourceKey = storageKeys.source(
-    session.projectId,
-    model.id,
-    version.id,
-    extensionOf(filename),
-  );
+  const sourceKey = storageKeys.source(projectId, model.id, version.id, extensionOf(filename));
 
   await db
     .update(schema.modelVersions)

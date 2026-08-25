@@ -55,6 +55,14 @@ export const db = new Proxy({} as Database, {
     const value = Reflect.get(database, property, database);
     return typeof value === 'function' ? value.bind(database) : value;
   },
+
+  // Drizzle identifies which dialect an instance belongs to by walking its
+  // prototype chain, and libraries built on it do the same -- the Auth.js
+  // adapter refuses a database it cannot classify. Without this trap it would
+  // be classifying the empty object standing in as the proxy target.
+  getPrototypeOf() {
+    return Object.getPrototypeOf(instance());
+  },
 });
 
 export { schema };

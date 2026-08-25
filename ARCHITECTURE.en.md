@@ -259,6 +259,19 @@ users only, through a presigned download link.
 | `POST` | `/api/versions/:id/uploaded` | The client confirms its upload finished; the version joins the queue |
 | `GET` | `/api/versions/:id/assets` | Presigned GET URLs for glb / metadata / thumb |
 
+Every endpoint resolves the caller first and then the resource through an
+access check, never by id alone: a model id is a uuid in a URL, not an
+authorisation. A caller who may not read something gets `404`, not `403` --
+confirming that a model exists but belongs to someone else says more than it
+needs to. The check that matters most is on `/versions/:id/assets`, because
+signing a download for a version the caller cannot read would hand over the
+model itself.
+
+Sign-in is GitHub only. A development build additionally offers a
+password-less local sign-in so a fresh clone can run without registering an
+OAuth app; it is excluded from the provider list when `NODE_ENV` is
+`production`.
+
 Uploads are three steps rather than one. The row is created before the file
 exists, because the upload needs a key to write to; it stays `uploading` until
 the client confirms, so a half-finished upload is never handed to the

@@ -1,9 +1,8 @@
-import { desc, eq } from 'drizzle-orm';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 import { ModelWorkspace } from '@/components/viewer/ModelWorkspace';
-import { db, schema } from '@/db';
+import { currentUser, readableModel } from '@/lib/session';
 import { presignDownload } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
@@ -14,19 +13,23 @@ interface Props {
 }
 
 export default async function ModelPage({ params, searchParams }: Props) {
+  const user = await currentUser();
+  if (!user) redirect('/sign-in');
+
   const { id } = await params;
   const { v } = await searchParams;
 
-  const model = await db.query.models.findFirst({
-    where: eq(schema.models.id, id),
-    with: { versions: { orderBy: [desc(schema.modelVersions.versionNo)] } },
-  });
-
+  // A model id in a URL is not an authorisation. Someone who is not allowed to
+  // see this one gets the same 404 as someone who guessed a uuid that does not
+  // exist.
+  const model = await readableModel(id, user.id);
   if (!model) notFound();
 
+  const versions = [...model.versions].sort((a, b) => b.versionNo - a.versionNo);
+
   const version = v
-    ? model.versions.find((candidate) => candidate.id === v)
-    : model.versions.find((candidate) => candidate.status === 'ready');
+    ? versions.find((candidate) => candidate.id === v)
+    : versions.find((candidate) => candidate.status === 'ready');
 
   const ready = version?.status === 'ready' && version.glbKey && version.metadataKey;
 
@@ -41,9 +44,9 @@ export default async function ModelPage({ params, searchParams }: Props) {
         </div>
 
         <div className="flex items-center gap-3 text-xs text-slate-500">
-          {model.versions.length > 1 && (
+          {versions.length > 1 && (
             <nav className="flex items-center gap-1">
-              {model.versions.map((candidate) => (
+              {versions.map((candidate) => (
                 <Link
                   key={candidate.id}
                   href={`/models/${model.id}?v=${candidate.id}`}

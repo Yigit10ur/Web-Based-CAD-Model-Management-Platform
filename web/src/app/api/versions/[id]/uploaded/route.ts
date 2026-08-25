@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { db, schema } from '@/db';
+import { currentUser, writableVersion } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,14 @@ export const dynamic = 'force-dynamic';
  * is already converting, or already converted, back to the start of the queue.
  */
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: 'not signed in' }, { status: 401 });
+
   const { id } = await params;
+
+  if (!(await writableVersion(id, user.id))) {
+    return NextResponse.json({ error: 'not found' }, { status: 404 });
+  }
 
   const [version] = await db
     .update(schema.modelVersions)

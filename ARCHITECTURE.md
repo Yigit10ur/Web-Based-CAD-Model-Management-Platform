@@ -253,6 +253,18 @@ kullanıcıya presigned indirme linki ile verilir.
 | `POST` | `/api/versions/:id/uploaded` | İstemci yüklemenin bittiğini bildirir, versiyon kuyruğa girer |
 | `GET` | `/api/versions/:id/assets` | glb / metadata / thumb için presigned GET |
 
+Her uç önce çağıranı, sonra kaynağı bir erişim kontrolünden geçirir; hiçbir
+zaman yalnızca id ile değil: URL'deki model id'si bir uuid'dir, yetki belgesi
+değil. Okuma hakkı olmayan çağıran `403` değil `404` alır — bir modelin var
+olduğunu ama başkasına ait olduğunu doğrulamak, söylenmesi gerekenden
+fazlasını söyler. En kritik kontrol `/versions/:id/assets` üzerindedir, çünkü
+okuma hakkı olmayan birine imzalı indirme linki üretmek doğrudan modelin
+kendisini vermek olur.
+
+Giriş yalnızca GitHub ile. Geliştirme derlemesinde ayrıca parolasız bir yerel
+giriş var; böylece taze bir klon OAuth uygulaması kaydetmeden çalışabiliyor.
+`NODE_ENV` `production` olduğunda sağlayıcı listesinden çıkarılır.
+
 Yükleme tek adım değil, üç adım. Kayıt dosyadan önce oluşturulur çünkü
 yüklemenin yazacağı bir anahtara ihtiyacı var; istemci onaylayana kadar
 `uploading` durumunda kalır, böylece yarım kalmış bir yükleme converter'a hiç

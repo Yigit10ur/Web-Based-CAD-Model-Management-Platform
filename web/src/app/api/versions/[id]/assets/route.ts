@@ -1,7 +1,6 @@
-import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
-import { db, schema } from '@/db';
+import { currentUser, readableVersion } from '@/lib/session';
 import { presignDownload } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
@@ -13,12 +12,14 @@ export const dynamic = 'force-dynamic';
  * handing it out here would make every viewer a download link.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: 'not signed in' }, { status: 401 });
+
   const { id } = await params;
 
-  const version = await db.query.modelVersions.findFirst({
-    where: eq(schema.modelVersions.id, id),
-  });
-
+  // Signing a download for a version the caller cannot read would hand out
+  // the model itself, which is the one thing these URLs must not do.
+  const version = await readableVersion(id, user.id);
   if (!version) return NextResponse.json({ error: 'not found' }, { status: 404 });
 
   if (version.status !== 'ready' || !version.glbKey || !version.metadataKey) {
