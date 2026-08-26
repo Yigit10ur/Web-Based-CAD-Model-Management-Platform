@@ -12,7 +12,10 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:check": "node --env-file-if-exists=.env.local scripts/check-db.mjs",
+    "db:migrate:prod": "node --env-file=.env.prod ./node_modules/drizzle-kit/bin.cjs migrate",
+    "db:check:prod": "node --env-file=.env.prod scripts/check-db.mjs"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",

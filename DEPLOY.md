@@ -28,15 +28,34 @@ nothing.
    the development project — the application connects over Postgres directly
 3. **Storage → New bucket** named `cad-models`, private
 4. **Storage → S3 Connection**: enable the S3 protocol and create an access key
-5. Apply the schema, from your machine, pointing at the new database:
+5. Apply the schema from your machine. Put the connection string in a file
+   rather than on a command line -- a long command with a password in the
+   middle of it is the thing to get wrong once:
 
    ```bash
    cd web
-   DATABASE_URL='<production pooler URI>' npm run db:migrate
+   cp .env.prod.example .env.prod     # then fill in DATABASE_URL
+   npm run db:migrate:prod
+   npm run db:check:prod
    ```
 
-   Every migration in `web/drizzle/` runs in order, so a fresh database ends up
-   identical to the development one.
+   `.env.prod` is gitignored and is read only by the `:prod` scripts; Next.js
+   never loads it, so nothing can pick it up by accident. `db:check:prod`
+   prints which tables exist and how many migrations ran, without printing the
+   connection string.
+
+   Expected:
+
+   ```
+   host: aws-0-eu-central-1.pooler.supabase.com:6543
+
+     ✓  accounts
+     ✓  model_versions
+     ...
+   migrations applied: 3
+
+   Schema is complete.
+   ```
 
 ## 2. A GitHub OAuth app
 
