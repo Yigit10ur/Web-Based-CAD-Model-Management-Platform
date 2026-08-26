@@ -189,8 +189,10 @@ Tek bir `<Viewer>` R3F sahnesi, etrafında panel'ler:
 - **Sahne**: glb yüklenir, `three-mesh-bvh` ile her mesh'e BVH kurulur.
   Kenar polyline'ları ayrı bir `LineSegments` katmanı olarak çizilir — CAD
   görünümünü veren şey budur.
-- **Assembly ağacı paneli**: `metadata.json → tree`. Göster/gizle, izole et,
-  şeffaflaştır.
+- **Assembly ağacı paneli**: `metadata.json → tree`. Her düğümde görünürlüğü
+  denetleyen bir checkbox var; alt montajın kutusu kendi durumu değil,
+  çocuklarının bir görünümüdür — bazıları gizliyken kısmi görünür ve
+  senkronda tutulacak ikinci bir durum olmaz. İzole, diğer her şeyi gizler.
 - **Seçim**: raycast → mesh + üçgen indeksi → `face_groups` ile yüzey id'si.
   Seçim durumu zustand'da; ağaç ve sahne aynı state'i paylaşır.
 - **Ölçüm araçları**: nokta-nokta ölçüm, köşe > kenar > yüzey önceliğiyle
