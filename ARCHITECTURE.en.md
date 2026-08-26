@@ -291,11 +291,18 @@ which is how a crashed worker's job comes back.
 
 ## 9. Out of scope (MVP)
 
-- **Native CAD formats** — parts and assemblies (`.ipt`/`.iam`,
+- **Native CAD formats other than Inventor's** — parts and assemblies (
   `.sldprt`/`.sldasm`, `.catpart`/`.catproduct`, `.prt`/`.asm`) and drawings
   (`.idw`, `.slddrw`, `.catdrawing`, `.dwg`, `.dxf`). Each is turned away at
   upload with what to do instead; a drawing is told to upload the model it
-  documents rather than to export itself, which it cannot do. No open source solution
+  documents rather than to export itself, which it cannot do.
+
+  Inventor parts and assemblies are the exception: they are accepted and
+  handed to a translation agent (`agent/`) running on a machine that has
+  Inventor licensed, which exports STEP with Inventor's own translator. The
+  platform gains nothing it could not have gained from a hand-exported STEP —
+  it saves the user a step, and it means the company's existing licence does
+  the reading instead of a commercial SDK. No open source solution
   exists; a commercial SDK such as CAD Exchanger, HOOPS or Datakit is required.
   MVP formats: **STEP, STL, glTF/GLB**, and IGES if time allows.
 - Real-time multi-user sessions (co-navigation).

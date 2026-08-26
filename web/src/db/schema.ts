@@ -31,6 +31,11 @@ export const conversionStatusEnum = pgEnum('conversion_status', [
   // finished does it become 'queued' and visible to the worker, so a
   // half-uploaded file is never handed to the converter.
   'uploading',
+  // Native Inventor files cannot be read here. They wait for a translation
+  // agent -- a service on a machine that has Inventor installed -- to convert
+  // them to STEP, and only then join the conversion queue.
+  'awaiting_translation',
+  'translating',
   'queued',
   'processing',
   'ready',
@@ -138,6 +143,15 @@ export const modelVersions = pgTable(
     sourceKey: text('source_key').notNull(),
     sourceFormat: text('source_format').notNull(),
     sourceSizeBytes: bigint('source_size_bytes', { mode: 'number' }).notNull(),
+
+    /**
+     * STEP produced from a native file by the translation agent.
+     *
+     * The original upload is kept as it arrived: it is what the user sent and
+     * what a re-translation would start from. The converter reads this when it
+     * is set and the source otherwise.
+     */
+    translatedKey: text('translated_key'),
 
     glbKey: text('glb_key'),
     metadataKey: text('metadata_key'),

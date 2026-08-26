@@ -284,12 +284,18 @@ işi böyle geri gelir.
 
 ## 9. Kapsam dışı (MVP)
 
-- **Native CAD formatları** — parçalar ve montajlar (`.ipt`/`.iam`,
+- **Inventor dışındaki native CAD formatları** — parçalar ve montajlar (
   `.sldprt`/`.sldasm`, `.catpart`/`.catproduct`, `.prt`/`.asm`) ve teknik
   resimler (`.idw`, `.slddrw`, `.catdrawing`, `.dwg`, `.dxf`). Her biri
   yüklemede, ne yapılması gerektiğini söyleyen bir mesajla reddedilir; teknik
   resme "kendini dışa aktar" denmez, belgelediği modeli yüklemesi söylenir —
-  çünkü bir resmin dışa aktarılacak katısı yoktur. Açık kaynak
+  çünkü bir resmin dışa aktarılacak katısı yoktur.
+
+  Inventor parça ve montajları istisnadır: kabul edilir ve Inventor lisanslı
+  bir makinede çalışan çevirici ajana (`agent/`) verilir, o da Inventor'ın
+  kendi çeviricisiyle STEP üretir. Platform, elle STEP'e aktarılmış bir
+  dosyadan fazlasını kazanmaz — kullanıcıya bir adım kazandırır ve okuma işini
+  ticari bir SDK yerine şirketin zaten sahip olduğu lisans yapar. Açık kaynak
   çözümü yoktur; CAD Exchanger / HOOPS / Datakit gibi ticari SDK gerekir.
   MVP formatları: **STEP, STL, glTF/GLB**, vakit kalırsa IGES.
 - Gerçek zamanlı çok kullanıcılı oturum (birlikte gezinme).

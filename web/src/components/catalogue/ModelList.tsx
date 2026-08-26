@@ -10,6 +10,8 @@ export type ModelWithVersions = Model & { versions: ModelVersion[] };
 
 const STATUS_STYLE: Record<ModelVersion['status'], string> = {
   uploading: 'bg-slate-100 text-slate-600',
+  awaiting_translation: 'bg-violet-100 text-violet-800',
+  translating: 'bg-violet-100 text-violet-800',
   queued: 'bg-amber-100 text-amber-800',
   processing: 'bg-blue-100 text-blue-800',
   ready: 'bg-emerald-100 text-emerald-800',
@@ -22,13 +24,24 @@ function formatSize(bytes: number): string {
   return megabytes < 1 ? `${Math.round(bytes / 1024)} KB` : `${megabytes.toFixed(1)} MB`;
 }
 
+/** The status column is an implementation detail; these are what to show. */
+const STATUS_LABEL: Record<ModelVersion['status'], string> = {
+  uploading: 'uploading',
+  awaiting_translation: 'waiting for Inventor',
+  translating: 'translating',
+  queued: 'queued',
+  processing: 'converting',
+  ready: 'ready',
+  failed: 'failed',
+};
+
 function Status({ version }: { version: ModelVersion }) {
   return (
     <span
       className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${STATUS_STYLE[version.status]}`}
       title={version.errorMessage ?? undefined}
     >
-      {version.status}
+      {STATUS_LABEL[version.status]}
     </span>
   );
 }
@@ -38,8 +51,14 @@ export function ModelList({ models }: { models: ModelWithVersions[] }) {
 
   // Conversion happens in another process, so the page has no way of being
   // told when it finishes. Poll only while something is actually in flight.
+  const inFlight: ModelVersion['status'][] = [
+    'awaiting_translation',
+    'translating',
+    'queued',
+    'processing',
+  ];
   const pending = models.some((model) =>
-    model.versions.some((version) => version.status === 'queued' || version.status === 'processing'),
+    model.versions.some((version) => inFlight.includes(version.status)),
   );
 
   useEffect(() => {

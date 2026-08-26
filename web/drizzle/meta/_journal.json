@@ -15,6 +15,13 @@
       "when": 1787643277562,
       "tag": "0001_tan_living_mummy",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787721955777,
+      "tag": "0002_chubby_magdalene",
+      "breakpoints": true
     }
   ]
 }

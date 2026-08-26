@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { extensionOf, formatOf, rejectionReason } from '@/lib/formats';
+import { extensionOf, formatOf, needsTranslation, rejectionReason } from '@/lib/formats';
 
 describe('rejectionReason', () => {
   it.each(['bracket.step', 'bracket.STEP', 'bracket.stp', 'shaft.iges', 'shaft.igs'])(
@@ -27,10 +27,29 @@ describe('rejectionReason', () => {
     },
   );
 
+  describe('Inventor parts and assemblies', () => {
+    it.each(['bracket.ipt', 'frame.iam', 'packed.zip'])(
+      'accepts %s, for the translation agent to handle',
+      (filename) => {
+        expect(rejectionReason(filename)).toBeNull();
+        expect(needsTranslation(filename)).toBe(true);
+      },
+    );
+
+    it('does not route a format the converter reads itself through translation', () => {
+      expect(needsTranslation('bracket.step')).toBe(false);
+      expect(needsTranslation('mesh.stl')).toBe(false);
+    });
+
+    it('still turns away an Inventor drawing, which has no model to translate', () => {
+      const reason = rejectionReason('sheet.idw') ?? '';
+      expect(reason).toContain('not a 3D model');
+      expect(needsTranslation('sheet.idw')).toBe(false);
+    });
+  });
+
   describe('native part and assembly files', () => {
     it.each([
-      ['bracket.ipt', 'Inventor', 'part'],
-      ['frame.iam', 'Inventor', 'assembly'],
       ['bracket.sldprt', 'SolidWorks', 'part'],
       ['frame.sldasm', 'SolidWorks', 'assembly'],
       ['bracket.catpart', 'CATIA', 'part'],
@@ -67,7 +86,7 @@ describe('rejectionReason', () => {
   });
 
   it('gets the article right for each application name', () => {
-    expect(rejectionReason('bracket.ipt')).toContain('an Inventor');
+    expect(rejectionReason('sheet.idw')).toContain('an Inventor');
     expect(rejectionReason('bracket.sldprt')).toContain('a SolidWorks');
     expect(rejectionReason('bracket.catpart')).toContain('a CATIA');
     expect(rejectionReason('sheet.slddrw')).toContain('a SolidWorks drawing');
@@ -92,6 +111,7 @@ describe('rejectionReason', () => {
   it('is not fooled by a dot inside the name', () => {
     expect(rejectionReason('rev.2.final.step')).toBeNull();
     expect(rejectionReason('rev.2.final.idw')).toContain('not a 3D model');
+    expect(needsTranslation('rev.2.final.iam')).toBe(true);
   });
 });
 

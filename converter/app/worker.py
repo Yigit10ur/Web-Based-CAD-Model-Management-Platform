@@ -39,18 +39,24 @@ WHERE id = (
     FOR UPDATE SKIP LOCKED
     LIMIT 1
 )
-RETURNING id, model_id, source_key, source_format
+RETURNING id, model_id, source_key, translated_key, source_format
 """
 
 # A worker that dies mid-job leaves its row claimed forever. Nothing else would
-# ever notice, so the queue reclaims anything that has been processing for
-# longer than a conversion could plausibly take.
+# ever notice, so the queue reclaims anything that has been held for longer
+# than the work could plausibly take. Each status returns to the queue it came
+# from: a conversion to `queued`, a translation to `awaiting_translation`,
+# where the Inventor agent will find it again.
 REQUEUE_STALE_SQL = """
 UPDATE model_versions
-SET status = 'queued', claimed_at = NULL
-WHERE status = 'processing'
+SET status = CASE status
+        WHEN 'translating' THEN 'awaiting_translation'::conversion_status
+        ELSE 'queued'::conversion_status
+    END,
+    claimed_at = NULL
+WHERE status IN ('processing', 'translating')
   AND claimed_at < now() - make_interval(secs => %s)
-RETURNING id
+RETURNING id, status
 """
 
 SUCCEED_SQL = """
@@ -104,7 +110,10 @@ def claim(conn: psycopg.Connection) -> dict[str, Any] | None:
 
 def process(conn: psycopg.Connection, job: dict[str, Any]) -> None:
     version_id = job["id"]
-    source_key = job["source_key"]
+
+    # A native Inventor file was translated to STEP before it reached this
+    # queue. The original upload is kept, but it is not what gets converted.
+    source_key = job["translated_key"] or job["source_key"]
     logger.info("converting %s (%s)", version_id, source_key)
 
     with tempfile.TemporaryDirectory(prefix="cad-") as workspace:

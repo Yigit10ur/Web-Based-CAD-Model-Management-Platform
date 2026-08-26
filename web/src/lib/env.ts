@@ -27,6 +27,16 @@ const schema = z.object({
   AUTH_GITHUB_ID: z.string().optional(),
   AUTH_GITHUB_SECRET: z.string().optional(),
 
+  /**
+   * Shared secret for the Inventor translation agent.
+   *
+   * The agent runs outside this deployment -- on a machine that has Inventor
+   * installed -- so it authenticates with a token rather than a user session.
+   * Unset means the agent endpoints refuse every request, which is the right
+   * default for a deployment that has no agent.
+   */
+  AGENT_TOKEN: z.string().min(16).optional(),
+
   /** How long presigned upload and download links stay valid. */
   STORAGE_URL_TTL_SECONDS: z.coerce.number().int().positive().default(900),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(200),

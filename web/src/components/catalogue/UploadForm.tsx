@@ -39,7 +39,9 @@ export function UploadForm() {
           {stageLabel(stage, 'Upload model')}
         </button>
 
-        <span className="text-xs text-slate-500">STEP, IGES, STL, OBJ, PLY, glTF</span>
+        <span className="text-xs text-slate-500">
+          STEP, IGES, STL, OBJ, PLY, glTF · Inventor IPT, and IAM as a Pack and Go zip
+        </span>
       </div>
 
       <input

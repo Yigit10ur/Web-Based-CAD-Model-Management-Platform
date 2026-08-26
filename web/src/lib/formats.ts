@@ -11,6 +11,7 @@
  * than it is for a drawing.
  */
 
+/** Read directly by the converter. */
 export const SUPPORTED_EXTENSIONS = [
   '.step',
   '.stp',
@@ -22,6 +23,21 @@ export const SUPPORTED_EXTENSIONS = [
   '.glb',
   '.gltf',
 ] as const;
+
+/**
+ * Accepted, but only after a translation agent has turned them into STEP.
+ *
+ * A `.zip` is how an assembly arrives: an `.iam` on its own holds references
+ * to part files and no geometry, so uploading one alone would produce an empty
+ * model. Inventor's Pack and Go writes exactly the folder this expects.
+ */
+export const TRANSLATED_EXTENSIONS = ['.ipt', '.iam', '.zip'] as const;
+
+export function needsTranslation(filename: string): boolean {
+  return TRANSLATED_EXTENSIONS.includes(
+    extensionOf(filename) as (typeof TRANSLATED_EXTENSIONS)[number],
+  );
+}
 
 type NativeKind = 'part' | 'assembly' | 'drawing';
 
@@ -42,9 +58,8 @@ interface NativeFormat {
  * drawing does not export to anything this platform can show.
  */
 const NATIVE_FORMATS: Record<string, NativeFormat> = {
-  // Autodesk Inventor
-  '.ipt': { kind: 'part', application: 'Inventor' },
-  '.iam': { kind: 'assembly', application: 'Inventor' },
+  // Inventor parts and assemblies are handled by the translation agent and so
+  // are deliberately absent here; only the drawing is turned away.
   '.idw': { kind: 'drawing', application: 'Inventor' },
 
   // SolidWorks
@@ -104,6 +119,8 @@ export function rejectionReason(filename: string): string | null {
     return null;
   }
 
+  if (needsTranslation(filename)) return null;
+
   const native = NATIVE_FORMATS[extension];
   if (native) return nativeMessage(extension, native);
 
@@ -111,5 +128,6 @@ export function rejectionReason(filename: string): string | null {
     return `${extension} is a 2D drawing format. This platform inspects 3D models — upload the model itself, exported to STEP.`;
   }
 
-  return `${extension || 'that file type'} is not supported. Upload one of: ${SUPPORTED_EXTENSIONS.join(', ')}.`;
+  const accepted = [...SUPPORTED_EXTENSIONS, ...TRANSLATED_EXTENSIONS].join(', ');
+  return `${extension || 'that file type'} is not supported. Upload one of: ${accepted}.`;
 }

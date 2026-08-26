@@ -32,6 +32,8 @@ comes from the B-rep the CAD file actually contains.
 **Platform**
 
 - Upload straight from the browser to object storage with a presigned URL
+- Native Inventor parts and assemblies, translated to STEP by an agent running
+  on a machine that has Inventor licensed
 - Conversion runs as a background worker off a database-backed queue
 - Every model belongs to a project, and every read and write is checked
   against it
@@ -59,6 +61,7 @@ The full reasoning, including the alternatives that were rejected, is in
 ```
 /web         Next.js — catalogue, API and the 3D viewer
 /converter   FastAPI + OpenCascade — conversion and the queue worker
+/agent       Windows service that translates Inventor files with Inventor
 ```
 
 ## Getting started
@@ -139,6 +142,8 @@ raporlanan her sayı dosyanın gerçekten içerdiği B-rep'ten gelir.
 **Platform**
 
 - Tarayıcıdan doğrudan nesne depolamaya presigned URL ile yükleme
+- Native Inventor parça ve montajları, Inventor lisanslı bir makinede çalışan
+  ajan tarafından STEP'e çevrilerek
 - Dönüştürme, veritabanı destekli bir kuyruktan beslenen arka plan worker'ında
 - Her model bir projeye ait ve her okuma/yazma buna karşı denetleniyor
 - GitHub ile giriş
@@ -165,6 +170,7 @@ Reddedilen alternatifler dahil gerekçelerin tamamı
 ```
 /web         Next.js — katalog, API ve 3B viewer
 /converter   FastAPI + OpenCascade — dönüştürme ve kuyruk worker'ı
+/agent       Inventor dosyalarını Inventor ile çeviren Windows servisi
 ```
 
 ### Başlarken

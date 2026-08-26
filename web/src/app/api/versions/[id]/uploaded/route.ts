@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { db, schema } from '@/db';
+import { needsTranslation } from '@/lib/formats';
 import { currentUser, writableVersion } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
@@ -18,13 +19,19 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
 
   const { id } = await params;
 
-  if (!(await writableVersion(id, user.id))) {
+  const target = await writableVersion(id, user.id);
+  if (!target) {
     return NextResponse.json({ error: 'not found' }, { status: 404 });
   }
 
+  // A native Inventor file cannot be read here at all. It waits for the
+  // translation agent instead of joining the converter's queue, where it would
+  // only fail.
+  const next = needsTranslation(target.sourceKey) ? 'awaiting_translation' : 'queued';
+
   const [version] = await db
     .update(schema.modelVersions)
-    .set({ status: 'queued' })
+    .set({ status: next })
     .where(
       and(eq(schema.modelVersions.id, id), eq(schema.modelVersions.status, 'uploading')),
     )
