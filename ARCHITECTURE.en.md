@@ -197,6 +197,12 @@ A single `<Viewer>` R3F scene surrounded by panels:
   rather than a state of its own, so it reads as partly on when some of them
   are hidden and there is nothing to keep in sync. Isolate hides everything
   else.
+
+  Siblings that are the same part used more than once collapse into one row
+  with a count. A fastener appearing twenty-four times is otherwise
+  twenty-four indistinguishable rows pushing the rest of the assembly off the
+  screen; grouped, the tree shows what the assembly is made of, and the
+  instances are one expansion away.
 - **Selection**: raycast → mesh + triangle index → face id via `face_groups`.
   Selection state lives in zustand; the tree and the scene share it.
 - **Measurement tools**: point-to-point measurement, snapping vertex > edge >

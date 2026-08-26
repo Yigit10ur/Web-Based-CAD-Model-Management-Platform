@@ -193,6 +193,12 @@ Tek bir `<Viewer>` R3F sahnesi, etrafında panel'ler:
   denetleyen bir checkbox var; alt montajın kutusu kendi durumu değil,
   çocuklarının bir görünümüdür — bazıları gizliyken kısmi görünür ve
   senkronda tutulacak ikinci bir durum olmaz. İzole, diğer her şeyi gizler.
+
+  Aynı parçanın birden çok kez kullanıldığı kardeşler tek satırda, sayısıyla
+  birlikte toplanır. Yirmi dört kez geçen bir bağlantı elemanı aksi halde
+  birbirinden ayırt edilemeyen yirmi dört satır demek ve montajın geri kalanını
+  ekrandan itiyor; gruplanınca ağaç montajın neyden oluştuğunu gösteriyor,
+  örnekler ise tek tıkla açılıyor.
 - **Seçim**: raycast → mesh + üçgen indeksi → `face_groups` ile yüzey id'si.
   Seçim durumu zustand'da; ağaç ve sahne aynı state'i paylaşır.
 - **Ölçüm araçları**: nokta-nokta ölçüm, köşe > kenar > yüzey önceliğiyle
