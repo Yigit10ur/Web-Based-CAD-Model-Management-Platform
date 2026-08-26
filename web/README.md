@@ -30,9 +30,23 @@ object storage.
 
 ```bash
 npm run db:generate   # write a migration from src/db/schema.ts
-npm run db:migrate    # apply migrations
+npm run db:migrate    # apply migrations to the development database
+npm run db:check      # report which tables exist and how many migrations ran
 npm run db:studio     # browse the data
 ```
+
+The `:prod` variants read `.env.prod` instead of the usual cascade, for
+migrating the production database by hand:
+
+```bash
+cp .env.prod.example .env.prod
+npm run db:migrate:prod
+npm run db:check:prod
+```
+
+An explicitly set `DATABASE_URL` wins over `.env.local` in `drizzle.config.ts`.
+Without that, a production migration would be quietly redirected at the
+development database.
 
 ## Checks
 
