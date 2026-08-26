@@ -56,6 +56,8 @@ interface ViewerState {
 
   select: (partId: string | null, face?: number | null) => void;
   toggleVisibility: (partId: string) => void;
+  /** Show or hide a whole branch of the tree in one step. */
+  setVisibility: (partIds: string[], visible: boolean) => void;
   isolate: (partId: string, allPartIds: string[]) => void;
   showAll: () => void;
   setTool: (tool: ViewerTool) => void;
@@ -83,6 +85,19 @@ export const useViewerStore = create<ViewerState>((set) => ({
   measurements: [],
 
   select: (partId, face = null) => set({ selected: partId, selectedFace: face }),
+
+  setVisibility: (partIds, visible) =>
+    set((state) => {
+      const hidden = new Set(state.hidden);
+      for (const partId of partIds) {
+        if (visible) {
+          hidden.delete(partId);
+        } else {
+          hidden.add(partId);
+        }
+      }
+      return { hidden };
+    }),
 
   toggleVisibility: (partId) =>
     set((state) => {

@@ -84,9 +84,9 @@ mass in the properties panel in a different frame from the thing on screen.
 ## Status
 
 Loads the converter's output: assembly tree, part selection, B-rep face
-picking, exact mass properties, edge overlay, isolate/hide, an exploded view,
-point-to-point measurement that snaps to exact CAD geometry, and a capped
-section plane.
+picking, exact mass properties, edge overlay, per-part visibility checkboxes
+with isolate, an exploded view, point-to-point measurement that snaps to exact
+CAD geometry, and a capped section plane.
 
 Uploads a CAD file straight to object storage, records it, and opens the
 converted result once the worker has finished with it. A model can be given a

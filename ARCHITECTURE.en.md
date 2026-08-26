@@ -192,8 +192,11 @@ A single `<Viewer>` R3F scene surrounded by panels:
 - **Scene**: the glb is loaded and a BVH is built per mesh via
   `three-mesh-bvh`. Edge polylines are drawn as a separate `LineSegments`
   layer — this is what produces the CAD look.
-- **Assembly tree panel**: driven by `metadata.json → tree`. Show/hide, isolate,
-  make transparent.
+- **Assembly tree panel**: driven by `metadata.json → tree`. A checkbox per
+  node controls visibility; a sub-assembly's box is a view of its children
+  rather than a state of its own, so it reads as partly on when some of them
+  are hidden and there is nothing to keep in sync. Isolate hides everything
+  else.
 - **Selection**: raycast → mesh + triangle index → face id via `face_groups`.
   Selection state lives in zustand; the tree and the scene share it.
 - **Measurement tools**: point-to-point measurement, snapping vertex > edge >
