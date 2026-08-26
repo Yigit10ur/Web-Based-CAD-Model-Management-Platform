@@ -75,7 +75,16 @@ path. This is the single most common reason a first deploy cannot sign in.
 ## 3. Web, on Vercel
 
 Import the repository, then set **Root Directory** to `web` — the repository
-holds three projects and Vercel needs to be told which one.
+holds three projects and Vercel needs to be told which one. Without it the
+build fails with "No Next.js version detected": it is looking at a repository
+root that has no `package.json`.
+
+The function region is pinned to Frankfurt in `web/vercel.json`, next to the
+database and the storage bucket. Left at the default, every request would run
+in Washington and cross the Atlantic several times per page — the catalogue
+alone makes three sequential queries. It is set in the repository rather than
+in the dashboard so that it is reviewed like any other change and cannot be
+lost in a project's settings.
 
 Environment variables:
 
@@ -98,16 +107,18 @@ file on a laptop is not a production secret.
 
 ```bash
 cd converter
-fly launch --no-deploy          # accept the existing fly.toml
-fly secrets set \
-  DATABASE_URL='...' \
-  STORAGE_ENDPOINT='...' \
-  STORAGE_REGION='...' \
-  STORAGE_BUCKET='cad-models' \
-  STORAGE_ACCESS_KEY_ID='...' \
-  STORAGE_SECRET_ACCESS_KEY='...'
-fly deploy
+fly apps create cad-converter          # `fly launch` would rewrite fly.toml
+
+cp .env.fly.example .env.fly           # then fill it in
+grep -vE '^#|^$' .env.fly | fly secrets import --stage
+
+fly deploy --remote-only
 ```
+
+Secrets are piped from a file rather than passed as arguments: `fly secrets
+set KEY=value` leaves the value in your shell history, and a storage secret
+does not belong there. `.env.fly` is gitignored, and you can delete it once the
+secrets are set — Fly keeps them.
 
 `fly deploy` builds the image on Fly's builder, so this works from a machine
 with no Docker installed.
