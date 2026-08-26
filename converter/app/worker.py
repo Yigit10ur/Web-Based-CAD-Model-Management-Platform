@@ -156,6 +156,17 @@ def run() -> None:
     signal.signal(signal.SIGINT, stop)
     signal.signal(signal.SIGTERM, stop)
 
+    # Refuse to start rather than accept jobs and fail every one of them. A
+    # container that is up but cannot import OCCT looks healthy from outside
+    # and quietly turns the queue into a list of failures.
+    from app.cad import occt
+
+    if not occt.available():
+        raise SystemExit(
+            "OCCT is not importable in this environment. "
+            'Install it with: pip install -e ".[cad]", or use the Docker image.'
+        )
+
     conn = connect()
     logger.info("worker started, polling every %.1fs", settings.poll_interval)
 

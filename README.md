@@ -102,6 +102,11 @@ deployed yet, so there is no live URL.
 
 Working conventions and the branching model: [CONTRIBUTING.md](CONTRIBUTING.md)
 
+## Deploying
+
+Vercel for the web app, Fly.io for the converter, a second Supabase project for
+production: [DEPLOY.md](DEPLOY.md)
+
 ## License
 
 [MIT](LICENSE)
@@ -207,6 +212,11 @@ dolayısıyla canlı bir adres yok.
 ### Katkı
 
 Çalışma kuralları ve dal modeli: [CONTRIBUTING.md](CONTRIBUTING.md)
+
+### Deploy
+
+Web için Vercel, converter için Fly.io, üretim için ayrı bir Supabase projesi:
+[DEPLOY.md](DEPLOY.md)
 
 ### Lisans
 
