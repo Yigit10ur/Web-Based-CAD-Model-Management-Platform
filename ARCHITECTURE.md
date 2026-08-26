@@ -291,7 +291,7 @@ işi böyle geri gelir.
   resme "kendini dışa aktar" denmez, belgelediği modeli yüklemesi söylenir —
   çünkü bir resmin dışa aktarılacak katısı yoktur. Açık kaynak
   çözümü yoktur; CAD Exchanger / HOOPS / Datakit gibi ticari SDK gerekir.
-  MVP formatları: **STEP, STL, glTF/GLB**, vakit kalırsa IGES.
+  Doğrudan okunan formatlar: **STEP, IGES, STL, OBJ, PLY, glTF/GLB**.
 - Gerçek zamanlı çok kullanıcılı oturum (birlikte gezinme).
 - PMI / GD&T anotasyonlarının okunması.
 - Sunucu tarafı yüksek kaliteli render (raytrace) çıktısı.
@@ -303,6 +303,7 @@ işi böyle geri gelir.
 | ~~OCCT kurulumu~~ | **Elendi (2026-08-24).** Kurulum yerel ortamda doğrulandı; bölüm 3'teki nota bakınız. |
 | OCCT API öğrenme eğrisi | Kalan risk. 1. haftada uçtan uca tek bir STEP dönüşümü bitmeli. |
 | Dockerfile hiç build edilmedi | Yerel geliştirme onsuz yürüdüğü için imaj doğrulanmamış durumda. Deploy haftasına bırakılırsa orada sürpriz çıkar; 3. hafta içinde bir kez build edilmeli. |
+| ~~IGES hiç denenmedi~~ | **Kapandı.** Üretilmiş bir IGES fixture'ı, OCCT'nin kurulu olduğu her yerde test paketi tarafından çevriliyor — yerelde ve Docker imajında; CI işi geometri testlerini bilerek atlıyor. Geometri exact; format ürün yapısı taşımadığı için montaj tek isimsiz parça olarak geliyor. |
 | Devasa STEP dosyaları | Deflection'ı bbox'a göre ölçekle, üçgen bütçesi koy, dosya boyutu üst sınırı uygula. |
 | ~~Ölçüm doğruluğu~~ | **Çözüldü.** Converter `snap` bloğunu (vertex, kenar, yüzey tanımları) yayıyor; viewer ölçümü buna snap'liyor, mesh'e değil. Köşe-köşe ölçüm 40×20 plakanın köşegeninde 44.72 mm veriyor. |
 | ~~Erişim kurallarının testi yok~~ | **Kapandı.** Kurallar CI'da PGlite'a karşı koşuyor; ikisini bilerek bozmanın testleri düşürdüğü doğrulandı. |

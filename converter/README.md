@@ -57,15 +57,28 @@ ruff format --check .
 pytest
 ```
 
-## Test fixture
+## Test fixtures
 
-`tests/fixtures/assembly.step` is generated rather than hand made, so the
-reader path is exercised against real product structure -- names, colours and a
-three part assembly:
+Generated rather than checked in by hand, so what each file contains is stated
+in code:
 
 ```bash
 python scripts/make_fixture.py
 ```
+
+| File | What it is for |
+|---|---|
+| `assembly.step` | Real product structure: names, colours, three parts |
+| `two_solids.igs` | The IGES path, and what it loses |
+| `box.stl` | A watertight mesh |
+| `open_surface.stl` | A mesh that encloses no volume |
+
+## STEP and IGES are not equivalent
+
+Both are read exactly -- volume, faces, edges and snap targets all come from
+the B-rep either way. But **IGES carries no product structure**: an assembly
+exported to it arrives as a single unnamed part, because the format has nowhere
+to put the tree. Prefer STEP when the assembly tree matters, which is usually.
 
 ## Status
 

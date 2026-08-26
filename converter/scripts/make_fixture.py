@@ -1,6 +1,10 @@
-"""Generate the STEP fixture used by the converter tests.
+"""Generate every fixture the converter tests read.
 
-Written with the XCAF writer rather than the plain STEP writer so the file
+Written rather than checked in by hand so that what each file contains is
+stated in code: a test asserting a volume of 4000 mm3 means nothing unless the
+box it came from is visibly 40 x 20 x 5 somewhere.
+
+The STEP is produced with the XCAF writer rather than the plain one so it
 carries part names, colours and a real assembly structure -- otherwise the
 reader path being tested would never see the interesting cases.
 
@@ -23,7 +27,10 @@ from OCP.XCAFApp import XCAFApp_Application
 from OCP.XCAFDoc import XCAFDoc_ColorSurf, XCAFDoc_DocumentTool
 
 FIXTURES = Path(__file__).resolve().parent.parent / "tests" / "fixtures"
-FIXTURE = FIXTURES / "assembly.step"
+STEP_FIXTURE = FIXTURES / "assembly.step"
+IGES_FIXTURE = FIXTURES / "two_solids.igs"
+BOX_FIXTURE = FIXTURES / "box.stl"
+OPEN_SURFACE_FIXTURE = FIXTURES / "open_surface.stl"
 
 
 def _translation(x: float, y: float, z: float) -> TopLoc_Location:
@@ -32,7 +39,7 @@ def _translation(x: float, y: float, z: float) -> TopLoc_Location:
     return TopLoc_Location(trsf)
 
 
-def main() -> None:
+def write_step() -> None:
     app = XCAFApp_Application.GetApplication_s()
     doc = TDocStd_Document(TCollection_ExtendedString("XmlOcaf"))
     app.NewDocument(TCollection_ExtendedString("MDTV-XCAF"), doc)
@@ -67,10 +74,80 @@ def main() -> None:
 
     writer = STEPCAFControl_Writer()
     writer.Transfer(doc)
-    FIXTURE.parent.mkdir(parents=True, exist_ok=True)
-    writer.Write(str(FIXTURE))
+    STEP_FIXTURE.parent.mkdir(parents=True, exist_ok=True)
+    writer.Write(str(STEP_FIXTURE))
 
-    print(f"wrote {FIXTURE} ({FIXTURE.stat().st_size} bytes)")
+    _report(STEP_FIXTURE)
+
+
+def write_iges() -> None:
+    """A box and a cylinder in one IGES file.
+
+    Two separate solids on purpose. IGES has no product structure, so the
+    reader has no way to keep them apart -- the test that asserts they arrive
+    as a single unnamed part is the point of this fixture, not an accident of
+    how it was written.
+    """
+    from OCP.BRep import BRep_Builder
+    from OCP.IGESControl import IGESControl_Controller, IGESControl_Writer
+    from OCP.TopoDS import TopoDS_Compound
+
+    IGESControl_Controller.Init_s()
+
+    # BRepMode 1 writes solids as manifold_solid_brep. The default writes
+    # surfaces instead, and a surface encloses no volume to measure.
+    writer = IGESControl_Writer("MM", 1)
+
+    builder = BRep_Builder()
+    compound = TopoDS_Compound()
+    builder.MakeCompound(compound)
+    builder.Add(compound, BRepPrimAPI_MakeBox(40.0, 20.0, 5.0).Shape())
+    builder.Add(
+        compound,
+        BRepPrimAPI_MakeCylinder(
+            gp_Ax2(gp_Pnt(20, 10, 5), gp_Dir(0, 0, 1)), 4.0, 25.0
+        ).Shape(),
+    )
+
+    writer.AddShape(compound)
+    writer.ComputeModel()
+    writer.Write(str(IGES_FIXTURE))
+
+    _report(IGES_FIXTURE)
+
+
+def write_meshes() -> None:
+    """One watertight mesh and one open surface.
+
+    The open surface exists to pin down the case where a volume cannot be
+    measured at all, which is the honest answer rather than a number.
+    """
+    import numpy as np
+    import trimesh
+
+    box = trimesh.creation.box(extents=(40.0, 20.0, 5.0))
+    box.apply_translation((20.0, 10.0, 2.5))
+    box.export(BOX_FIXTURE)
+    _report(BOX_FIXTURE)
+
+    trimesh.Trimesh(
+        vertices=np.array(
+            [[0, 0, 0], [40, 0, 0], [40, 20, 0], [0, 20, 0]], dtype=float
+        ),
+        faces=np.array([[0, 1, 2], [0, 2, 3]]),
+    ).export(OPEN_SURFACE_FIXTURE)
+    _report(OPEN_SURFACE_FIXTURE)
+
+
+def _report(path: Path) -> None:
+    print(f"wrote {path.name} ({path.stat().st_size} bytes)")
+
+
+def main() -> None:
+    FIXTURES.mkdir(parents=True, exist_ok=True)
+    write_step()
+    write_iges()
+    write_meshes()
 
 
 if __name__ == "__main__":
