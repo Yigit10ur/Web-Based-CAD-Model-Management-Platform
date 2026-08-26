@@ -1,0 +1,32 @@
+# The converter as a Fly.io app.
+#
+# One process, and it is the worker: the service has no callers, it polls the
+# database and writes to object storage. There is no HTTP port to expose, which
+# also means there is no public surface to defend.
+#
+#   fly launch --no-deploy      # once, to create the app
+#   fly secrets set DATABASE_URL=... STORAGE_ENDPOINT=... ...
+#   fly deploy
+#
+# `fly deploy` builds the image on Fly's builder, so this deploys from a
+# machine that has no Docker installed.
+
+app = "cad-converter"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[processes]
+  worker = "python -m app.worker"
+
+# No [[services]] block on purpose: nothing connects to this app. Fly keeps the
+# process running and restarts it if it exits, which is the only supervision it
+# needs.
+
+[[vm]]
+  size = "shared-cpu-1x"
+  # OCCT tessellation is memory hungry on real assemblies, and the default
+  # 256 MB is not enough to load the toolkit, let alone mesh anything.
+  memory = "1gb"
+  processes = ["worker"]

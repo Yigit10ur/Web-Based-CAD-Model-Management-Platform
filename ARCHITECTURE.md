@@ -310,7 +310,7 @@ işi böyle geri gelir.
 |---|---|
 | ~~OCCT kurulumu~~ | **Elendi (2026-08-24).** Kurulum yerel ortamda doğrulandı; bölüm 3'teki nota bakınız. |
 | OCCT API öğrenme eğrisi | Kalan risk. 1. haftada uçtan uca tek bir STEP dönüşümü bitmeli. |
-| Dockerfile hiç build edilmedi | Yerel geliştirme onsuz yürüdüğü için imaj doğrulanmamış durumda. Deploy haftasına bırakılırsa orada sürpriz çıkar; 3. hafta içinde bir kez build edilmeli. |
+| Dockerfile hiç build edilmedi | Hâlâ açık. Yerel geliştirme onu hiç gerektirmiyor, dolayısıyla imaj doğrulanmadı ve yazıldığı makinede Docker yok. `fly deploy` uzaktan build ediyor, cevap orada alınacak — DEPLOY.md'ye bakınız. Konteyner artık sağlık API'si yerine worker'ı çalıştırıyor; deploy'un ihtiyacı olan bu. |
 | ~~IGES hiç denenmedi~~ | **Kapandı.** Üretilmiş bir IGES fixture'ı, OCCT'nin kurulu olduğu her yerde test paketi tarafından çevriliyor — yerelde ve Docker imajında; CI işi geometri testlerini bilerek atlıyor. Geometri exact; format ürün yapısı taşımadığı için montaj tek isimsiz parça olarak geliyor. |
 | Devasa STEP dosyaları | Deflection'ı bbox'a göre ölçekle, üçgen bütçesi koy, dosya boyutu üst sınırı uygula. |
 | ~~Ölçüm doğruluğu~~ | **Çözüldü.** Converter `snap` bloğunu (vertex, kenar, yüzey tanımları) yayıyor; viewer ölçümü buna snap'liyor, mesh'e değil. Köşe-köşe ölçüm 40×20 plakanın köşegeninde 44.72 mm veriyor. |

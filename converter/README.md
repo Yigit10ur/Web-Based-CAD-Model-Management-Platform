@@ -45,6 +45,15 @@ It reads the same environment variables as the web application, so one
 Two processes on purpose: a long conversion must not block the health endpoint
 the platform uses to decide whether the service is alive.
 
+The container runs the worker by default, because that is what the deployment
+needs; the health API is still in the image and can be run instead by
+overriding the command. The worker checks that OCCT is importable before it
+claims anything and exits with a message if it is not — a container that is up
+but cannot convert looks healthy from outside and turns the queue into a list
+of failures.
+
+Deployment: [../DEPLOY.md](../DEPLOY.md)
+
 `GET /ready` reports whether OCCT is importable in the current environment. A
 container that answers `/health` but fails `/ready` will accept jobs and fail
 every one of them, so check readiness, not liveness.

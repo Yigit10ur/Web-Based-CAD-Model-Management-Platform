@@ -317,7 +317,7 @@ which is how a crashed worker's job comes back.
 |---|---|
 | ~~OCCT setup~~ | **Retired 2026-08-24.** Installation verified locally; see the note in section 3. |
 | OCCT API learning curve | The remaining risk. One end-to-end STEP conversion must be done in week 1. |
-| The Dockerfile has never been built | Local development works without it, so the image is unverified. Left until deployment week it will surprise you; build it once during week 3. |
+| The Dockerfile has never been built | Still open. Local development never needs it, so the image is unverified, and there is no Docker on the machine it was written on. `fly deploy` builds remotely, which is where this gets answered -- see DEPLOY.md. The container now runs the worker rather than the health API, which is what deployment actually needs. |
 | ~~IGES never tried~~ | **Closed.** A generated IGES fixture is converted by the test suite wherever OCCT is installed -- locally and in the Docker image, not in the CI job, which skips the geometry tests by design. The geometry is exact; the format carries no product structure, so an assembly arrives as one unnamed part. |
 | Very large STEP files | Scale deflection with the bounding box, cap the triangle budget, enforce a file size limit. |
 | ~~Measurement accuracy~~ | **Solved.** The converter emits a `snap` block (vertices, edges, face definitions) and the viewer snaps measurements to it rather than to the mesh. A corner-to-corner measurement across the 40×20 plate reads 44.72 mm. |
