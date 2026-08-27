@@ -4,6 +4,9 @@
 
 **English** · [Türkçe](#türkçe)
 
+**[Live](https://web-based-cad-model-management-plat.vercel.app)** · the viewer alone, with no account:
+**[/sample](https://web-based-cad-model-management-plat.vercel.app/sample)**
+
 Upload a CAD assembly and inspect it in the browser: walk the part tree, read
 exact mass properties, measure between corners, and cut a section through it.
 
@@ -91,12 +94,13 @@ Per-service detail: [web/README.md](web/README.md) ·
 
 ## Status
 
-Working end to end: sign in, upload a STEP file, watch it convert, open it and
-inspect it.
+Deployed and working end to end: sign in with GitHub, upload a STEP file, watch
+it convert, open it and inspect it. The web app runs on Vercel, the converter
+on Fly.io, and Postgres and object storage on Supabase — all in Frankfurt, so
+that a page does not cross an ocean to read its own data.
 
 Not built yet: markup, angle measurement, an off-axis section plane, search and
-filtering, thumbnails, and a projects and sharing interface. Nothing is
-deployed yet, so there is no live URL.
+filtering, thumbnails, and a projects and sharing interface.
 
 ## Contributing
 
@@ -116,6 +120,9 @@ production: [DEPLOY.md](DEPLOY.md)
 ## Türkçe
 
 [English](#web-based-cad-model-management-platform) · **Türkçe**
+
+**[Canlı](https://web-based-cad-model-management-plat.vercel.app)** · hesapsız, yalnızca viewer:
+**[/sample](https://web-based-cad-model-management-plat.vercel.app/sample)**
 
 Bir CAD montajını yükleyip tarayıcıda inceleyin: parça ağacında gezin, exact
 kütle özelliklerini okuyun, köşeler arası ölçüm yapın, içinden kesit alın.
@@ -202,12 +209,13 @@ Servis bazında ayrıntı: [web/README.md](web/README.md) ·
 
 ### Durum
 
-Uçtan uca çalışıyor: giriş yap, STEP dosyası yükle, dönüşmesini izle, aç ve
-incele.
+Deploy edildi ve uçtan uca çalışıyor: GitHub ile giriş yap, STEP dosyası yükle,
+dönüşmesini izle, aç ve incele. Web uygulaması Vercel'de, converter Fly.io'da,
+Postgres ve nesne depolama Supabase'de — hepsi Frankfurt'ta, bir sayfa kendi
+verisini okumak için okyanus aşmasın diye.
 
 Henüz yok: markup, açı ölçümü, eksen dışı kesit düzlemi, arama ve filtreleme,
-küçük resim üretimi, proje ve paylaşım arayüzü. Hiçbir yere deploy edilmedi,
-dolayısıyla canlı bir adres yok.
+küçük resim üretimi, proje ve paylaşım arayüzü.
 
 ### Katkı
 

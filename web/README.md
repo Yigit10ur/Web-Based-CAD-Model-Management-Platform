@@ -35,6 +35,10 @@ npm run db:check      # report which tables exist and how many migrations ran
 npm run db:studio     # browse the data
 ```
 
+`vercel link` writes into `.env.local`: an OIDC token, and any environment
+variables it can read from the project. Production credentials do not belong in
+the development file, so remove what it adds.
+
 The `:prod` variants read `.env.prod` instead of the usual cascade, for
 migrating the production database by hand:
 
