@@ -17,7 +17,10 @@ __pycache__/
 # Environment
 .env
 .env.*
+# Templates carry no secrets and are what the setup instructions tell you to
+# copy, so they belong in the repository.
 !.env.example
+!.env.fly.example
 
 # Editors / OS
 .DS_Store
