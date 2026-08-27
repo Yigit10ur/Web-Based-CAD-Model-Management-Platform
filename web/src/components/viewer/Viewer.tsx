@@ -1,16 +1,55 @@
 'use client';
 
-import { Suspense, useMemo } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Suspense, useEffect, useMemo } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import { Grid, GizmoHelper, GizmoViewport, OrbitControls } from '@react-three/drei';
 
-import { FOV, frameModel } from '@/lib/framing';
+import { FOV, frameModel, type Framing } from '@/lib/framing';
 import type { ModelMetadata } from '@/lib/metadata';
 import { modelBounds } from '@/lib/section';
 import { useViewerStore } from '@/store/viewer-store';
 
 import { MeasureLayer } from './MeasureLayer';
 import { Model } from './Model';
+
+/**
+ * Point the camera at the model.
+ *
+ * Position alone is not enough: a camera that has not been told where to look
+ * keeps the orientation it was created with, and R3F's default is to face the
+ * world origin. Every model this viewer had opened until now happened to sit
+ * near the origin, so facing the origin and facing the model were the same
+ * thing and the omission never showed. A part a metre and a half out is simply
+ * off to one side, and the viewport looks empty.
+ *
+ * The orbit controls' own target has to be moved with it, or the first drag
+ * would swing the view back to the origin.
+ */
+type OrbitLike = {
+  target?: { set: (x: number, y: number, z: number) => void };
+  update?: () => void;
+};
+
+function FrameOnModel({ view }: { view: Framing }) {
+  const camera = useThree((state) => state.camera);
+  const controls = useThree((state) => state.controls) as OrbitLike | null;
+
+  useEffect(() => {
+    camera.position.set(...view.position);
+    camera.up.set(0, 0, 1);
+    camera.lookAt(...view.target);
+    // near and far are set on the Canvas itself, which is keyed by model, so
+    // they are already right for whatever is being shown.
+    camera.updateProjectionMatrix();
+
+    if (controls?.target) {
+      controls.target.set(...view.target);
+      controls.update?.();
+    }
+  }, [camera, controls, view]);
+
+  return null;
+}
 
 export function Viewer({ url, metadata }: { url: string; metadata: ModelMetadata }) {
   const select = useViewerStore((state) => state.select);
@@ -22,6 +61,11 @@ export function Viewer({ url, metadata }: { url: string; metadata: ModelMetadata
 
   return (
     <Canvas
+      // A different model means a different size, position and depth range, and
+      // the camera's near and far planes are only read when the canvas is
+      // created. Keying it on the model retires the old canvas rather than
+      // leaving it configured for the previous one.
+      key={url}
       // CAD data is Z-up and the geometry is left in the coordinates the
       // metadata describes, so the camera is told which way is up rather than
       // the model being rotated into three.js' Y-up convention. Rotating the
@@ -73,7 +117,8 @@ export function Viewer({ url, metadata }: { url: string; metadata: ModelMetadata
         side={2}
       />
 
-      <OrbitControls makeDefault enableDamping target={view.target} />
+      <OrbitControls makeDefault enableDamping />
+      <FrameOnModel view={view} />
       {/* An axis triad rather than a view cube: drei's cube is labelled for a
           Y-up world and shows "BOTTOM" on top in a Z-up scene, which is worse
           than no cube at all. A Z-up view cube is its own piece of work. */}
