@@ -29,7 +29,26 @@ function instance(): Database {
   const sql =
     cache.sql ??
     postgres(env().DATABASE_URL, {
-      max: 10,
+      /**
+       * One connection per instance in serverless, ten in a long-lived process.
+       *
+       * A serverless function handles one request at a time, so a pool of ten
+       * buys it nothing -- but it does take ten slots from a pooler that is
+       * shared by every instance at once and capped at 200. Under load that
+       * runs out, and the failure is not confined to the web app: the
+       * converter cannot connect either, and uploads sit in the queue with
+       * nothing wrong with them.
+       *
+       * Locally there is a single process serving a single developer, where a
+       * larger pool is free and keeps parallel requests from queueing behind
+       * each other.
+       */
+      max: process.env.VERCEL ? 1 : 10,
+
+      // Hand connections back rather than holding them for the lifetime of an
+      // instance that may be idle between requests.
+      idle_timeout: 20,
+
       // Supabase's transaction pooler does not support prepared statements.
       prepare: false,
     });
