@@ -95,7 +95,9 @@ Per-service detail: [web/README.md](web/README.md) ·
 ## Status
 
 Deployed and working end to end: sign in with GitHub, upload a STEP file, watch
-it convert, open it and inspect it. The web app runs on Vercel, the converter
+it convert, open it and inspect it. The converter is scaled to zero between
+uses, so an upload may sit at `queued` until a worker is started — see
+[DEPLOY.md](DEPLOY.md). The web app runs on Vercel, the converter
 on Fly.io, and Postgres and object storage on Supabase — all in Frankfurt, so
 that a page does not cross an ocean to read its own data.
 
@@ -210,7 +212,9 @@ Servis bazında ayrıntı: [web/README.md](web/README.md) ·
 ### Durum
 
 Deploy edildi ve uçtan uca çalışıyor: GitHub ile giriş yap, STEP dosyası yükle,
-dönüşmesini izle, aç ve incele. Web uygulaması Vercel'de, converter Fly.io'da,
+dönüşmesini izle, aç ve incele. Converter kullanılmadığı zamanlarda sıfıra
+indiriliyor, dolayısıyla bir yükleme worker açılana kadar `queued` durumunda
+bekleyebilir — bkz. [DEPLOY.md](DEPLOY.md). Web uygulaması Vercel'de, converter Fly.io'da,
 Postgres ve nesne depolama Supabase'de — hepsi Frankfurt'ta, bir sayfa kendi
 verisini okumak için okyanus aşmasın diye.
 
