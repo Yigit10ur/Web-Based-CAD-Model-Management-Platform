@@ -148,6 +148,42 @@ than accepting jobs it cannot do.
 Then, in the browser: sign in with GitHub, upload a STEP file, and watch it go
 `queued` → `converting` → `ready`.
 
+## Running the converter only when you need it
+
+A Fly machine is billed while it runs, and the worker's design is to poll --
+so left alone it runs, and bills, around the clock to wait for uploads that
+mostly are not coming. For a project that converts a handful of files a week,
+that is the wrong trade.
+
+So the converter is normally scaled to zero:
+
+```bash
+cd converter
+fly scale count worker=1 --app cad-converter --yes    # before converting
+fly scale count worker=0 --app cad-converter --yes    # after
+```
+
+It takes about twenty seconds to come up and then works through whatever has
+accumulated. **Nothing is lost while it is down**: an upload still reaches
+storage and still gets its row, and simply sits at `queued` until a worker
+claims it. The catalogue shows that status honestly rather than pretending the
+file failed.
+
+The alternative is to run the worker on your own machine against the
+production database, which costs nothing at all:
+
+```bash
+cd converter && ./.venv/bin/python -m app.worker
+```
+
+It reads `../web/.env.local` by default, so pass the production values
+explicitly if that is what you want it to work on.
+
+A third option, not built: give the worker an HTTP endpoint, have the web app
+call it after an upload, and let Fly start and stop the machine around each
+request. That would make the cost proportional to the work instead of to the
+calendar, and it is the right answer if this ever converts files regularly.
+
 ## Afterwards
 
 **Migrations** are run by hand against production, the same way as in step 1.
