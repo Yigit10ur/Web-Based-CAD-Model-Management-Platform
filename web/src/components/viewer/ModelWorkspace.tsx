@@ -15,10 +15,20 @@ interface Props {
   modelUrl: string;
   /** Presigned URL for the matching metadata.json. */
   metadataUrl: string;
+  /** Which model version is on screen. Changing it clears the viewer. */
+  versionId: string;
 }
 
-export function ModelWorkspace({ modelUrl, metadataUrl }: Props) {
+export function ModelWorkspace({ modelUrl, metadataUrl, versionId }: Props) {
   const { metadata, error } = useModelMetadata(metadataUrl);
+
+  // The store is a module singleton, and the route keeps this component mounted
+  // when you move from one model to the next, so without this every model
+  // inherits the last one's state: its measurements drawn across unrelated
+  // geometry, and its hidden parts hiding whatever happens to share an id.
+  useEffect(() => {
+    useViewerStore.getState().reset();
+  }, [versionId]);
 
   // Escape abandons a measurement in progress, then leaves the tool. Two
   // presses rather than one so a mis-click does not also cost the tool.

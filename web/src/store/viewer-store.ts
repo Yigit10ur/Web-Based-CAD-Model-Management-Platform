@@ -69,20 +69,34 @@ interface ViewerState {
   cancelPending: () => void;
   removeMeasurement: (id: string) => void;
   clearMeasurements: () => void;
+  /** Drop everything that belongs to one model, ready for the next. */
+  reset: () => void;
+}
+
+/**
+ * The state that belongs to whichever model is open.
+ *
+ * All of it is per-model, and none of it means anything against a different
+ * one: part ids are numbered from scratch in every file, so a hidden `n1_3`
+ * carried over from the last model hides an unrelated part in this one, and a
+ * measurement taken on one assembly draws itself across another.
+ */
+function initialState() {
+  return {
+    hidden: new Set<string>(),
+    selected: null,
+    selectedFace: null,
+    tool: 'select' as ViewerTool,
+    explode: 0,
+    section: { enabled: false, axis: 'z' as SectionAxis, position: 0.5, flipped: false },
+    hover: null,
+    pending: null,
+    measurements: [],
+  };
 }
 
 export const useViewerStore = create<ViewerState>((set) => ({
-  hidden: new Set<string>(),
-  selected: null,
-  selectedFace: null,
-  tool: 'select',
-  explode: 0,
-
-  section: { enabled: false, axis: 'z', position: 0.5, flipped: false },
-
-  hover: null,
-  pending: null,
-  measurements: [],
+  ...initialState(),
 
   select: (partId, face = null) => set({ selected: partId, selectedFace: face }),
 
@@ -155,4 +169,6 @@ export const useViewerStore = create<ViewerState>((set) => ({
     })),
 
   clearMeasurements: () => set({ measurements: [], pending: null }),
+
+  reset: () => set(initialState()),
 }));

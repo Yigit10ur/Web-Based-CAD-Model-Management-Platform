@@ -84,6 +84,7 @@ export default async function ModelPage({ params, searchParams }: Props) {
         // Signed on the server: the browser gets links to storage, never
         // credentials, and the original CAD file is not among them.
         <ModelWorkspace
+          versionId={version.id}
           modelUrl={await presignDownload(version.glbKey!)}
           metadataUrl={await presignDownload(version.metadataKey!)}
         />
