@@ -24,6 +24,7 @@ export default function SamplePage() {
         <span className="text-xs text-slate-500">bundled converter sample</span>
       </header>
       <ModelWorkspace
+        versionId="sample"
         modelUrl="/samples/assembly.glb"
         metadataUrl="/samples/assembly.json"
       />
