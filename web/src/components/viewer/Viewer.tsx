@@ -99,7 +99,7 @@ export function Viewer({ url, metadata }: { url: string; metadata: ModelMetadata
         <Model url={url} metadata={metadata} />
       </Suspense>
 
-      <MeasureLayer />
+      <MeasureLayer view={view} />
 
       {/* Rotated onto the XY plane so it reads as the CAD ground plane, and
           sunk to the underside of the model so it reads as the floor the part
