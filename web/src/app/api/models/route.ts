@@ -78,6 +78,7 @@ export async function POST(request: Request) {
       modelId: model.id,
       versionNo: 1,
       sourceKey: '',
+      sourceFilename: filename,
       sourceFormat: formatOf(filename),
       sourceSizeBytes: sizeBytes,
       createdBy: user.id,

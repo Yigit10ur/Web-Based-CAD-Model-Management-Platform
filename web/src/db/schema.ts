@@ -136,6 +136,15 @@ export const modelVersions = pgTable(
     versionNo: bigint('version_no', { mode: 'number' }).notNull(),
 
     sourceKey: text('source_key').notNull(),
+    /**
+     * The name of the file as uploaded.
+     *
+     * `sourceKey` normalises to `source.step`, and the catalogue name may be
+     * replaced by the one the CAD file declares, so without this column the
+     * name the user actually chose survives nowhere. Null on versions uploaded
+     * before the column existed.
+     */
+    sourceFilename: text('source_filename'),
     sourceFormat: text('source_format').notNull(),
     sourceSizeBytes: bigint('source_size_bytes', { mode: 'number' }).notNull(),
 

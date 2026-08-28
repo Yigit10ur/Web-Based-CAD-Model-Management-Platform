@@ -55,10 +55,17 @@ export default async function ModelPage({ params, searchParams }: Props) {
                 <Link
                   key={candidate.id}
                   href={`/models/${model.id}?v=${candidate.id}`}
+                  // Which file this revision came from, so a version can be
+                  // matched back to the upload it was made from.
                   title={
-                    candidate.status === 'ready'
-                      ? undefined
-                      : `version ${candidate.versionNo} is ${candidate.status}`
+                    [
+                      candidate.sourceFilename,
+                      candidate.status === 'ready'
+                        ? null
+                        : `version ${candidate.versionNo} is ${candidate.status}`,
+                    ]
+                      .filter(Boolean)
+                      .join(' — ') || undefined
                   }
                   className={`rounded px-1.5 py-0.5 ${
                     candidate.id === version?.id
@@ -72,6 +79,18 @@ export default async function ModelPage({ params, searchParams }: Props) {
                 </Link>
               ))}
             </nav>
+          )}
+
+          {/* The catalogue name may be the one the CAD file declares rather
+              than the file's own, so the uploaded name is shown here instead of
+              being lost. */}
+          {version?.sourceFilename && (
+            <span
+              className="hidden max-w-56 truncate font-mono text-slate-400 sm:inline"
+              title={version.sourceFilename}
+            >
+              {version.sourceFilename}
+            </span>
           )}
 
           {version && <span>{version.sourceFormat.toUpperCase()}</span>}

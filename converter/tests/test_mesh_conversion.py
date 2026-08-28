@@ -120,3 +120,15 @@ def test_metadata_is_written_next_to_the_glb(box):
     assert metadata["geometry_source"] == "mesh"
     assert metadata["units"] == "mm"
     assert len(metadata["tree"]) == 1
+
+
+def test_a_mesh_declares_no_name(tmp_path: Path) -> None:
+    """An STL has no product structure, so it has no name of its own to give.
+
+    Without this the catalogue would fill up with models called `Solid`, or
+    with the file name arriving back by a longer route.
+    """
+    result = convert(BOX, tmp_path / "box.glb")
+
+    assert result.metadata.geometry_source == "mesh"
+    assert result.metadata.declared_name is None

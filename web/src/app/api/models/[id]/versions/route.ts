@@ -58,6 +58,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       modelId: model.id,
       versionNo: (latest?.versionNo ?? 0) + 1,
       sourceKey: '',
+      sourceFilename: filename,
       sourceFormat: formatOf(filename),
       sourceSizeBytes: sizeBytes,
       createdBy: user.id,
