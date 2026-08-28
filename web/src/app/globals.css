@@ -12,12 +12,20 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/*
+ * No dark scheme block here on purpose.
+ *
+ * Every surface in this application names its own colour -- `bg-white`,
+ * `bg-slate-50`, `text-slate-900` -- so it is a light design whether or not the
+ * browser asks for a dark one. The starter template's dark override changed
+ * only the inherited body colour, which left anything that did not name a
+ * colour of its own drawing near-white text on those white surfaces: every text
+ * input in the application was unreadable for anyone whose system was set to
+ * dark.
+ *
+ * A real dark theme is a piece of work -- every surface, border and shadow --
+ * not a variable.
+ */
 
 body {
   background: var(--background);

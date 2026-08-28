@@ -40,6 +40,11 @@ export const conversionStatusEnum = pgEnum('conversion_status', [
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
+  /**
+   * Null for an account that signs in through GitHub, which is most of them.
+   * The format carries its own scrypt parameters -- see `lib/password.ts`.
+   */
+  passwordHash: text('password_hash'),
   emailVerified: timestamp('email_verified', { withTimezone: true }),
   name: text('name'),
   image: text('image'),
@@ -187,6 +192,24 @@ export const projectMembers = pgTable(
     role: memberRoleEnum('role').notNull().default('viewer'),
   },
   (table) => [uniqueIndex('project_members_pk').on(table.projectId, table.userId)],
+);
+
+/**
+ * One failed sign-in, kept just long enough to slow down guessing.
+ *
+ * Keyed by the address rather than by the account, because the addresses that
+ * do not exist are exactly the ones an attacker is enumerating, and they have
+ * no account to hang a counter on. A serverless host has no memory between
+ * requests to count in, so the counter has to live here.
+ */
+export const signInAttempts = pgTable(
+  'sign_in_attempts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull(),
+    at: timestamp('at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('sign_in_attempts_idx').on(table.email, table.at)],
 );
 
 /**

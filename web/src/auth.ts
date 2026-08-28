@@ -4,6 +4,7 @@ import Credentials from 'next-auth/providers/credentials';
 import GitHub from 'next-auth/providers/github';
 
 import { db, schema } from '@/db';
+import { authenticate } from '@/lib/accounts';
 import { claimInvitations } from '@/lib/projects';
 
 /**
@@ -12,14 +13,12 @@ import { claimInvitations } from '@/lib/projects';
  * GitHub is the only real provider: this is a tool for people who already have
  * a GitHub account, and not owning a password store is a feature.
  *
- * The second provider is a development shortcut. Registering an OAuth app is a
- * few minutes of clicking that should not stand between a fresh clone and a
- * running application, so on a development machine you can sign in as a local
- * user with no external service at all. It is gated on NODE_ENV and refuses to
- * load in production, where the sign-in page shows GitHub alone.
+ * The second is email and password, for people who do not have a GitHub
+ * account or do not want to use it here. Everything that makes a password
+ * usable safely -- how it is hashed, what is refused, how guessing is slowed
+ * down -- is in `lib/password.ts` and `lib/accounts.ts`; this file only wires
+ * them in.
  */
-
-const isDevelopment = process.env.NODE_ENV !== 'production';
 
 const providers = [
   ...(process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET
@@ -31,30 +30,17 @@ const providers = [
       ]
     : []),
 
-  ...(isDevelopment
-    ? [
-        Credentials({
-          id: 'dev',
-          name: 'Development sign-in',
-          credentials: { email: { label: 'Email', type: 'email' } },
-          async authorize(credentials) {
-            const email = String(credentials?.email ?? '').trim().toLowerCase();
-            if (!email) return null;
-
-            const [user] = await db
-              .insert(schema.users)
-              .values({ email, name: email.split('@')[0] })
-              .onConflictDoUpdate({
-                target: schema.users.email,
-                set: { email },
-              })
-              .returning();
-
-            return { id: user.id, email: user.email, name: user.name };
-          },
-        }),
-      ]
-    : []),
+  Credentials({
+    id: 'password',
+    name: 'Email and password',
+    credentials: {
+      email: { label: 'Email', type: 'email' },
+      password: { label: 'Password', type: 'password' },
+    },
+    async authorize(credentials) {
+      return authenticate(String(credentials?.email ?? ''), String(credentials?.password ?? ''));
+    },
+  }),
 ];
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -102,4 +88,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 export const githubEnabled = Boolean(
   process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET,
 );
-export const devSignInEnabled = isDevelopment;
+/** Whether the sign-in page offers email and password. Always: it needs no setup. */
+export const passwordSignInEnabled = true;

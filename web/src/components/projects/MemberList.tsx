@@ -166,13 +166,13 @@ export function MemberList({
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="colleague@example.com"
-              className="w-64 rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+              className="w-64 rounded-md border border-slate-300 px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400"
             />
 
             <select
               value={role}
               onChange={(event) => setRole(event.target.value as Member['role'])}
-              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-900"
             >
               <option value="viewer">viewer</option>
               <option value="editor">editor</option>
