@@ -9,12 +9,18 @@ import { useViewerStore } from '@/store/viewer-store';
 const AXES: SectionAxis[] = ['x', 'y', 'z'];
 const AXIS_INDEX: Record<SectionAxis, number> = { x: 0, y: 1, z: 2 };
 
+/** The slider runs 0..1 across the model, so its midpoint is the middle. */
+const CENTRE = 0.5;
+
 export function SectionControls({ metadata }: { metadata: ModelMetadata }) {
   const section = useViewerStore((state) => state.section);
   const setSection = useViewerStore((state) => state.setSection);
 
   const bounds = useMemo(() => modelBounds(metadata.parts), [metadata]);
   const index = AXIS_INDEX[section.axis];
+  // Half a step either side: the slider cannot express a position closer to the
+  // middle than this, so anything within it already is the middle.
+  const centred = Math.abs(section.position - CENTRE) < 0.0005;
   // The slider is normalised across the model; the readout is in millimetres,
   // because that is the number someone reading a section actually wants.
   const at =
@@ -67,6 +73,20 @@ export function SectionControls({ metadata }: { metadata: ModelMetadata }) {
               title="Keep the other half"
             >
               flip
+            </button>
+
+            {/* Cutting through the middle is the section people want most often
+                and the one a slider is worst at hitting: half a pixel of travel
+                is tenths of a millimetre, and the result looks centred without
+                being centred. */}
+            <button
+              type="button"
+              disabled={centred}
+              className="rounded border border-slate-300 px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:border-slate-200 disabled:text-slate-300"
+              onClick={() => setSection({ position: CENTRE })}
+              title="Cut through the middle of the model"
+            >
+              centre
             </button>
           </div>
 
