@@ -40,7 +40,7 @@ export function SignInForm() {
         value={email}
         onChange={(event) => setEmail(event.target.value)}
         placeholder="you@example.com"
-        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400"
         aria-label="Email"
       />
 
@@ -52,7 +52,7 @@ export function SignInForm() {
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         placeholder="Password"
-        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400"
         aria-label="Password"
       />
 

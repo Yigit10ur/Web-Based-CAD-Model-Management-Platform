@@ -44,7 +44,7 @@ export function CreateProject() {
           value={name}
           onChange={(event) => setName(event.target.value)}
           placeholder="New project name"
-          className="w-64 rounded-md border border-slate-300 px-2.5 py-1.5 text-sm"
+          className="w-64 rounded-md border border-slate-300 px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400"
         />
         <button
           type="submit"

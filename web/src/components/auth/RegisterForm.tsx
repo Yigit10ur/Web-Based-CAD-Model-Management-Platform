@@ -48,7 +48,7 @@ export function RegisterForm({ minimumLength }: { minimumLength: number }) {
         value={email}
         onChange={(event) => setEmail(event.target.value)}
         placeholder="you@example.com"
-        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400"
         aria-label="Email"
       />
 
@@ -58,7 +58,7 @@ export function RegisterForm({ minimumLength }: { minimumLength: number }) {
         value={name}
         onChange={(event) => setName(event.target.value)}
         placeholder="Name (optional)"
-        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400"
         aria-label="Name"
       />
 
@@ -70,7 +70,7 @@ export function RegisterForm({ minimumLength }: { minimumLength: number }) {
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         placeholder="Password"
-        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400"
         aria-label="Password"
       />
 
