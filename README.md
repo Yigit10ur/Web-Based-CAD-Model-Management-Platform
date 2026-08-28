@@ -96,10 +96,11 @@ Per-service detail: [web/README.md](web/README.md) ·
 
 Deployed and working end to end: sign in with GitHub, upload a STEP file, watch
 it convert, open it and inspect it. The converter is scaled to zero between
-uses, so an upload may sit at `queued` until a worker is started — see
-[DEPLOY.md](DEPLOY.md). The web app runs on Vercel, the converter
-on Fly.io, and Postgres and object storage on Supabase — all in Frankfurt, so
-that a page does not cross an ocean to read its own data.
+uses: an upload starts a GitHub Actions run, which converts everything waiting
+and stops, so there is no converter to pay for or keep alive between files —
+see [DEPLOY.md](DEPLOY.md). The web app runs on Vercel, and Postgres and object
+storage on Supabase — both in Frankfurt, so that a page does not cross an ocean
+to read its own data.
 
 Not built yet: markup, angle measurement, an off-axis section plane, search and
 filtering, thumbnails, and a projects and sharing interface.
@@ -110,8 +111,8 @@ Working conventions and the branching model: [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Deploying
 
-Vercel for the web app, Fly.io for the converter, a second Supabase project for
-production: [DEPLOY.md](DEPLOY.md)
+Vercel for the web app, GitHub Actions for the converter, a second Supabase
+project for production: [DEPLOY.md](DEPLOY.md)
 
 ## License
 
@@ -212,11 +213,11 @@ Servis bazında ayrıntı: [web/README.md](web/README.md) ·
 ### Durum
 
 Deploy edildi ve uçtan uca çalışıyor: GitHub ile giriş yap, STEP dosyası yükle,
-dönüşmesini izle, aç ve incele. Converter kullanılmadığı zamanlarda sıfıra
-indiriliyor, dolayısıyla bir yükleme worker açılana kadar `queued` durumunda
-bekleyebilir — bkz. [DEPLOY.md](DEPLOY.md). Web uygulaması Vercel'de, converter Fly.io'da,
-Postgres ve nesne depolama Supabase'de — hepsi Frankfurt'ta, bir sayfa kendi
-verisini okumak için okyanus aşmasın diye.
+dönüşmesini izle, aç ve incele. Converter kullanılmadığı zamanlarda hiçbir yerde
+çalışmıyor: bir yükleme GitHub Actions çalışmasını tetikliyor, o da bekleyen ne
+varsa çeviriyor ve kapanıyor — bkz. [DEPLOY.md](DEPLOY.md). Web uygulaması
+Vercel'de, Postgres ve nesne depolama Supabase'de — ikisi de Frankfurt'ta, bir
+sayfa kendi verisini okumak için okyanus aşmasın diye.
 
 Henüz yok: markup, açı ölçümü, eksen dışı kesit düzlemi, arama ve filtreleme,
 küçük resim üretimi, proje ve paylaşım arayüzü.
@@ -227,8 +228,8 @@ küçük resim üretimi, proje ve paylaşım arayüzü.
 
 ### Deploy
 
-Web için Vercel, converter için Fly.io, üretim için ayrı bir Supabase projesi:
-[DEPLOY.md](DEPLOY.md)
+Web için Vercel, converter için GitHub Actions, üretim için ayrı bir Supabase
+projesi: [DEPLOY.md](DEPLOY.md)
 
 ### Lisans
 

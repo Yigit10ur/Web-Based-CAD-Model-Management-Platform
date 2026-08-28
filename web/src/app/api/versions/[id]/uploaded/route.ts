@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { db, schema } from '@/db';
+import { requestConversion } from '@/lib/converter';
 import { currentUser, writableVersion } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
@@ -38,6 +39,11 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
     if (!existing) return NextResponse.json({ error: 'not found' }, { status: 404 });
     return NextResponse.json({ version: existing });
   }
+
+  // Awaited rather than left running: a serverless function can be frozen the
+  // moment it responds, and a dropped request here would leave the file
+  // waiting for a worker nobody asked for.
+  await requestConversion();
 
   return NextResponse.json({ version });
 }
