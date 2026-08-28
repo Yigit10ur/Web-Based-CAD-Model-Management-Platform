@@ -40,7 +40,13 @@ export default async function SignInPage() {
 
         <SignInForm />
 
-        <p className="pt-4 text-center text-xs text-slate-500">
+        <p className="pt-3 text-center text-xs text-slate-500">
+          <Link href="/forgot-password" className="text-slate-500 hover:underline">
+            Forgotten your password?
+          </Link>
+        </p>
+
+        <p className="pt-2 text-center text-xs text-slate-500">
           No account yet?{' '}
           <Link href="/register" className="text-blue-600 hover:underline">
             Create one

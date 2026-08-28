@@ -116,13 +116,18 @@ export function passwordProblem(password: string, email: string): string | null 
     return 'Do not use your email address in your password.';
   }
 
+  // Matched by weight rather than by presence. `password123` is the word plus
+  // padding and is refused; `yeni bir uzun parola` merely contains a common
+  // word and is a perfectly good passphrase. Refusing the second is how a rule
+  // meant to improve passwords ends up making them worse.
   const OBVIOUS = [
     'password', 'qwerty', '11111111', '12345678', '123456789', '1234567890',
     'letmein', 'welcome', 'admin123', 'iloveyou', 'sifre', 'parola',
   ];
-  if (OBVIOUS.some((bad) => folded.includes(bad))) {
-    return 'That password is too easy to guess.';
-  }
+  const dominant = OBVIOUS.some(
+    (bad) => folded.includes(bad) && bad.length * 2 > folded.length,
+  );
+  if (dominant) return 'That password is too easy to guess.';
 
   return null;
 }
