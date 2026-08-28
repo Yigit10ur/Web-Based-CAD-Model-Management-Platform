@@ -33,6 +33,8 @@ vi.mock('@/auth', () => ({
   devSignInEnabled: true,
 }));
 
+import { eq } from 'drizzle-orm';
+
 import * as schema from '@/db/schema';
 import {
   addMember,
@@ -46,8 +48,21 @@ import { canWrite, ownedProject, readableProjects, writableProjects } from '@/li
 
 const db = () => holder.db;
 
+/**
+ * A fresh account, with its address unproved -- which is what registering with
+ * a password gives you, and what signing in through GitHub does not.
+ */
 async function makeUser(email: string) {
   const [user] = await db().insert(schema.users).values({ email }).returning();
+  return user;
+}
+
+/** The same, having proved the address. */
+async function makeVerifiedUser(email: string) {
+  const [user] = await db()
+    .insert(schema.users)
+    .values({ email, emailVerified: new Date() })
+    .returning();
   return user;
 }
 
@@ -162,7 +177,7 @@ describe('adding someone who has never signed in', () => {
     await addMember(project.id, 'manager@ehsim.example', 'editor', owner.id);
 
     // They sign in for the first time; the account exists only now.
-    const manager = await makeUser('manager@ehsim.example');
+    const manager = await makeVerifiedUser('manager@ehsim.example');
     const claimed = await claimInvitations(manager.id, manager.email!);
 
     expect(claimed).toBe(1);
@@ -171,11 +186,43 @@ describe('adding someone who has never signed in', () => {
     expect(await canWrite(project.id, manager.id)).toBe(true);
   });
 
-  it('leaves nothing behind to be claimed twice', async () => {
+  it('gives nothing to an address that has not been proved', async () => {
+    // The reason verification exists. An invitation is addressed by email, so
+    // without proof, registering as somebody is a way to collect what was meant
+    // for them.
+    const project = await createProject(owner.id, 'Bogie');
+    await addMember(project.id, 'manager@ehsim.example', 'editor', owner.id);
+
+    const impostor = await makeUser('manager@ehsim.example');
+
+    expect(await claimInvitations(impostor.id, impostor.email!)).toBe(0);
+    expect(await readableProjects(impostor.id)).not.toContain(project.id);
+    // And the invitation is still there, waiting for whoever can prove it.
+    expect((await membersOf(project.id)).invitations).toHaveLength(1);
+  });
+
+  it('opens it once the address is proved', async () => {
     const project = await createProject(owner.id, 'Bogie');
     await addMember(project.id, 'manager@ehsim.example', 'viewer', owner.id);
 
     const manager = await makeUser('manager@ehsim.example');
+    expect(await claimInvitations(manager.id, manager.email!)).toBe(0);
+
+    // Following the link is what changes; nothing else needs to happen again.
+    await db()
+      .update(schema.users)
+      .set({ emailVerified: new Date() })
+      .where(eq(schema.users.id, manager.id));
+
+    expect(await claimInvitations(manager.id, manager.email!)).toBe(1);
+    expect(await readableProjects(manager.id)).toContain(project.id);
+  });
+
+  it('leaves nothing behind to be claimed twice', async () => {
+    const project = await createProject(owner.id, 'Bogie');
+    await addMember(project.id, 'manager@ehsim.example', 'viewer', owner.id);
+
+    const manager = await makeVerifiedUser('manager@ehsim.example');
     await claimInvitations(manager.id, manager.email!);
 
     expect(await claimInvitations(manager.id, manager.email!)).toBe(0);
@@ -184,6 +231,10 @@ describe('adding someone who has never signed in', () => {
 
   it('gives nothing to a sign-in with no invitation waiting', async () => {
     const project = await createProject(owner.id, 'Bogie');
+    await db()
+      .update(schema.users)
+      .set({ emailVerified: new Date() })
+      .where(eq(schema.users.id, stranger.id));
 
     expect(await claimInvitations(stranger.id, stranger.email!)).toBe(0);
     expect(await readableProjects(stranger.id)).not.toContain(project.id);

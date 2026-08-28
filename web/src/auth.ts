@@ -3,6 +3,8 @@ import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import GitHub from 'next-auth/providers/github';
 
+import { and, eq, isNull } from 'drizzle-orm';
+
 import { db, schema } from '@/db';
 import { authenticate } from '@/lib/accounts';
 import { claimInvitations } from '@/lib/projects';
@@ -72,10 +74,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
      * to. A failure here must not stop the sign-in: the invitation is still in
      * the table and the next sign-in will find it.
      */
-    async signIn({ user }) {
+    async signIn({ user, account }) {
       if (!user.id || !user.email) return;
 
       try {
+        // An OAuth provider only hands over an address it has verified, so
+        // arriving through one is the proof. Recorded rather than assumed at
+        // every read, so that the rest of the application has one question to
+        // ask: is this address verified?
+        if (account && account.provider !== 'password') {
+          await db
+            .update(schema.users)
+            .set({ emailVerified: new Date() })
+            .where(and(eq(schema.users.id, user.id), isNull(schema.users.emailVerified)));
+        }
+
         await claimInvitations(user.id, user.email);
       } catch (error) {
         console.error('could not claim invitations', error);
