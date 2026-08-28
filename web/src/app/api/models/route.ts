@@ -5,13 +5,15 @@ import { z } from 'zod';
 import { db, schema } from '@/db';
 import { env } from '@/lib/env';
 import { extensionOf, formatOf, rejectionReason } from '@/lib/formats';
-import { currentUser, personalProject, readableProjects } from '@/lib/session';
+import { canWrite, currentUser, personalProject, readableProjects } from '@/lib/session';
 import { presignUpload, storageKeys } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
 
 const createSchema = z.object({
   name: z.string().min(1).max(200),
+  /** Where the model goes. Defaults to the uploader's own project. */
+  projectId: z.string().uuid().optional(),
   description: z.string().max(2000).optional(),
   filename: z.string().min(1),
   contentType: z.string().default('application/octet-stream'),
@@ -52,7 +54,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: body.error.issues }, { status: 400 });
   }
 
-  const { name, description, filename, contentType, sizeBytes } = body.data;
+  const { name, description, projectId: requested, filename, contentType, sizeBytes } =
+    body.data;
 
   const rejection = rejectionReason(filename);
   if (rejection) return NextResponse.json({ error: rejection }, { status: 415 });
@@ -65,7 +68,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const projectId = await personalProject(user.id);
+  // A project id in the request body is a request, not a permission. Someone
+  // who can read a project -- or who guessed its id -- must not be able to put
+  // files in it.
+  let projectId: string;
+  if (requested) {
+    if (!(await canWrite(requested, user.id))) {
+      return NextResponse.json({ error: 'not found' }, { status: 404 });
+    }
+    projectId = requested;
+  } else {
+    projectId = await personalProject(user.id);
+  }
 
   const [model] = await db
     .insert(schema.models)

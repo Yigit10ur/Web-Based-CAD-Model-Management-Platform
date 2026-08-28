@@ -7,7 +7,7 @@
  * one could read any model in the database.
  */
 
-import { and, eq, or } from 'drizzle-orm';
+import { and, eq, inArray, or } from 'drizzle-orm';
 
 import { auth } from '@/auth';
 import { db, schema } from '@/db';
@@ -96,7 +96,60 @@ export async function readableProjects(userId: string): Promise<string[]> {
   return rows.map((row) => row.id);
 }
 
-async function canWrite(projectId: string, userId: string): Promise<boolean> {
+/**
+ * Projects the user may add models to.
+ *
+ * Read access and write access are different lists: a viewer sees a project's
+ * models and cannot put anything in it, so an upload destination picker built
+ * from `readableProjects` would offer choices that fail on submit.
+ */
+export async function writableProjects(userId: string) {
+  const readable = await readableProjects(userId);
+  if (readable.length === 0) return [];
+
+  const projects = await db.query.projects.findMany({
+    where: inArray(schema.projects.id, readable),
+  });
+
+  const allowed = await Promise.all(projects.map((p) => canWrite(p.id, userId)));
+  return projects.filter((_, index) => allowed[index]);
+}
+
+/**
+ * A project the user administers, or null.
+ *
+ * Deciding who else can see a project is the owner's alone. An editor may add
+ * models to it; letting them also hand out access would make "editor" a way to
+ * become an owner.
+ */
+export async function ownedProject(projectId: string, userId: string) {
+  const project = await db.query.projects.findFirst({
+    where: eq(schema.projects.id, projectId),
+  });
+  if (!project) return null;
+  if (project.ownerId === userId) return project;
+
+  const membership = await db.query.projectMembers.findFirst({
+    where: and(
+      eq(schema.projectMembers.projectId, projectId),
+      eq(schema.projectMembers.userId, userId),
+    ),
+  });
+
+  return membership?.role === 'owner' ? project : null;
+}
+
+/** A project the user may read, or null. */
+export async function readableProject(projectId: string, userId: string) {
+  const readable = await readableProjects(userId);
+  if (!readable.includes(projectId)) return null;
+
+  return (
+    (await db.query.projects.findFirst({ where: eq(schema.projects.id, projectId) })) ?? null
+  );
+}
+
+export async function canWrite(projectId: string, userId: string): Promise<boolean> {
   const project = await db.query.projects.findFirst({
     where: eq(schema.projects.id, projectId),
   });

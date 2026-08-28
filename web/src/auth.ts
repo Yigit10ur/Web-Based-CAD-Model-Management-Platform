@@ -4,6 +4,7 @@ import Credentials from 'next-auth/providers/credentials';
 import GitHub from 'next-auth/providers/github';
 
 import { db, schema } from '@/db';
+import { claimInvitations } from '@/lib/projects';
 
 /**
  * Authentication.
@@ -76,6 +77,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     session({ session, token }) {
       if (token.sub) session.user.id = token.sub;
       return session;
+    },
+  },
+  events: {
+    /**
+     * Someone can be invited to a project before they have an account, so this
+     * is the first moment those invitations have a user to attach themselves
+     * to. A failure here must not stop the sign-in: the invitation is still in
+     * the table and the next sign-in will find it.
+     */
+    async signIn({ user }) {
+      if (!user.id || !user.email) return;
+
+      try {
+        await claimInvitations(user.id, user.email);
+      } catch (error) {
+        console.error('could not claim invitations', error);
+      }
     },
   },
 });

@@ -189,6 +189,31 @@ export const projectMembers = pgTable(
   (table) => [uniqueIndex('project_members_pk').on(table.projectId, table.userId)],
 );
 
+/**
+ * Someone invited to a project who has not signed in yet.
+ *
+ * A person only becomes a row in `users` the first time they authenticate, so
+ * without this the only way to share is "sign in first and then I will add
+ * you". The invitation waits here and is turned into a membership when they
+ * arrive. Nothing is emailed: telling them is still a conversation between two
+ * people, which is what it would be anyway.
+ */
+export const projectInvitations = pgTable(
+  'project_invitations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    projectId: uuid('project_id')
+      .notNull()
+      .references(() => projects.id, { onDelete: 'cascade' }),
+    /** Stored lowercased, because that is how it will be matched. */
+    email: text('email').notNull(),
+    role: memberRoleEnum('role').notNull().default('viewer'),
+    invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('project_invitations_idx').on(table.projectId, table.email)],
+);
+
 export const projectsRelations = relations(projects, ({ one, many }) => ({
   owner: one(users, { fields: [projects.ownerId], references: [users.id] }),
   models: many(models),
@@ -204,5 +229,7 @@ export const modelVersionsRelations = relations(modelVersions, ({ one }) => ({
 }));
 
 export type Model = typeof models.$inferSelect;
+export type ProjectMember = typeof projectMembers.$inferSelect;
+export type ProjectInvitation = typeof projectInvitations.$inferSelect;
 export type ModelVersion = typeof modelVersions.$inferSelect;
 export type Project = typeof projects.$inferSelect;
