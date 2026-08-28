@@ -177,3 +177,41 @@ def test_face_geometry_is_aligned_with_face_groups(converted):
         # The two lists are indexed the same way; if they ever drift, picking a
         # face would report another face's type and radius.
         assert len(metadata["snap"][part_id]["faces"]) == len(ranges)
+
+
+def test_declares_the_name_the_file_carries(tmp_path: Path) -> None:
+    """The model's own name, for the catalogue to use instead of a file name.
+
+    A file name is whatever the operating system was holding; one upload here
+    arrived with its Turkish characters already stripped. The name inside the
+    file is written by the modeller and correctly encoded, so it is the better
+    thing to show -- but only when the file actually carries one.
+    """
+    result = occt.convert(FIXTURE, tmp_path / "model.glb")
+
+    assert result.metadata.declared_name == "Bracket Assembly"
+
+
+def test_reports_what_an_unnamed_file_declares_without_judging_it(
+    tmp_path: Path,
+) -> None:
+    """A STEP file with no product name still declares something.
+
+    Whatever wrote the file fills the gap -- OCCT's own writer leaves its
+    version string. The converter reports that faithfully; deciding whether a
+    declared name is worth showing belongs to the worker, which can compare it
+    against the name the file was uploaded under.
+    """
+    from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+    from OCP.STEPControl import STEPControl_AsIs, STEPControl_Writer
+
+    # STEPControl_Writer, unlike the XCAF writer, records no product names.
+    source = tmp_path / "unnamed.step"
+    writer = STEPControl_Writer()
+    writer.Transfer(BRepPrimAPI_MakeBox(10.0, 10.0, 10.0).Shape(), STEPControl_AsIs)
+    writer.Write(str(source))
+
+    result = occt.convert(source, tmp_path / "unnamed.glb")
+
+    assert result.metadata.tree[0].name
+    assert result.metadata.declared_name == "Open CASCADE STEP translator 7.9 1"

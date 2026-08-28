@@ -15,6 +15,13 @@
       "when": 1787643277562,
       "tag": "0001_tan_living_mummy",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787899221534,
+      "tag": "0002_rapid_barracuda",
+      "breakpoints": true
     }
   ]
 }

@@ -90,6 +90,10 @@ class ModelMetadata(BaseModel):
     """
 
     geometry_source: Literal["brep", "mesh"] = "brep"
+    # What the CAD file calls this model, or None when it does not say. A mesh
+    # file never says: an STL has no product structure, so its "name" would only
+    # ever be the file name coming back around.
+    declared_name: str | None = None
     tree: list[TreeNode]
     parts: dict[str, PartMetadata]
     units: str = "mm"

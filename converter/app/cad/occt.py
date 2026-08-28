@@ -61,6 +61,10 @@ class Part:
     color: tuple[float, float, float] | None
     children: list[Part] = field(default_factory=list)
     is_assembly: bool = False
+    # Whether `name` came from the file or from the fallback below. A caller
+    # that wants to trust the name has to be able to tell the two apart, and
+    # "does it look like 'Part 3'?" is not a test.
+    named: bool = False
 
 
 def _open_document(source: Path):
@@ -131,13 +135,14 @@ def read_parts(source: Path) -> list[Part]:
             shape_tool.GetReferredShape_s(label, referred)
             source_label = referred
 
-        name = name_of(source_label) or name_of(label) or fallback
+        declared = name_of(source_label) or name_of(label)
         part = Part(
             id=path,
-            name=name,
+            name=declared or fallback,
             shape=shape_tool.GetShape_s(label),
             color=color_of(source_label),
             is_assembly=shape_tool.IsAssembly_s(source_label),
+            named=declared is not None,
         )
 
         if part.is_assembly:
@@ -524,6 +529,10 @@ def convert(
         )
 
     metadata = ModelMetadata(
+        # The name the CAD file gives the model as a whole, which exists only
+        # when a single root carries a name of its own. Several roots have no
+        # one name between them, and an unnamed root has none to give.
+        declared_name=roots[0].name if len(roots) == 1 and roots[0].named else None,
         tree=[to_node(root) for root in roots],
         parts=parts,
         units="mm",

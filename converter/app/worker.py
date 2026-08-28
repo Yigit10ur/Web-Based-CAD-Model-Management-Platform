@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import signal
 import tempfile
 import time
@@ -39,7 +40,7 @@ WHERE id = (
     FOR UPDATE SKIP LOCKED
     LIMIT 1
 )
-RETURNING id, model_id, source_key, source_format
+RETURNING id, model_id, version_no, source_key, source_filename, source_format
 """
 
 # A worker that dies mid-job leaves its row claimed forever. Nothing else would
@@ -64,11 +65,52 @@ SET status = 'ready',
 WHERE id = %s
 """
 
+RENAME_SQL = """
+UPDATE models
+SET name = %s
+WHERE id = %s
+"""
+
 FAIL_SQL = """
 UPDATE model_versions
 SET status = 'failed', error_message = %s, claimed_at = NULL
 WHERE id = %s
 """
+
+
+def _words(text: str) -> set[str]:
+    """The alphanumeric words of a name, for comparing two spellings of it."""
+    return {
+        word.casefold()
+        for word in re.split(r"[^0-9A-Za-z\u00c0-\u024f]+", text)
+        if len(word) > 1
+    }
+
+
+def better_name(declared: str | None, filename: str | None) -> str | None:
+    """The CAD file's own name for the model, when it is plainly the same name.
+
+    A file name is whatever the operating system was holding. One upload here
+    arrived as `BK-09 BO^LUKSUZ ALUM0NYUM SERVO KAPL0N`: something upstream had
+    truncated each Turkish character to the low byte of its code point long
+    before we saw the file. The name inside the file was intact and correctly
+    encoded -- `BK-09 BOŞLUKSUZ SERVO KAPLİN` -- because the modeller wrote it
+    there through a Unicode escape the standard defines for exactly this.
+
+    So the point is to repair a damaged file name, not to overrule the person
+    who chose it. The two have to be recognisably the same name, which is
+    tested by sharing a word: the pair above share `bk`, `09` and `servo`.
+
+    That test also disposes of a name no one chose. A STEP file with no product
+    name of its own gets one from whatever wrote it -- OCCT's own writer leaves
+    `Open CASCADE STEP translator 7.9 1` -- and a translator's version string
+    has no words in common with anything a person would name a file.
+    """
+    if not declared or not filename:
+        return None
+
+    stem = filename.rsplit(".", 1)[0] if "." in filename else filename
+    return declared if _words(declared) & _words(stem) else None
 
 
 def connect() -> psycopg.Connection:
@@ -127,10 +169,22 @@ def process(conn: psycopg.Connection, job: dict[str, Any]) -> None:
             "units": result.metadata.units,
         }
 
+    # Only on the first version: renaming a model on a later revision would
+    # rename something people have been referring to by its old name.
+    name = (
+        better_name(result.metadata.declared_name, job["source_filename"])
+        if job["version_no"] == 1
+        else None
+    )
+
     with conn.cursor() as cursor:
         cursor.execute(
             SUCCEED_SQL, (glb_key, metadata_key, json.dumps(stats), version_id)
         )
+
+        if name:
+            cursor.execute(RENAME_SQL, (name[:200], job["model_id"]))
+            logger.info("named model %s %r from the file", job["model_id"], name)
 
     logger.info("done %s: %d triangles", version_id, result.triangle_count)
 
