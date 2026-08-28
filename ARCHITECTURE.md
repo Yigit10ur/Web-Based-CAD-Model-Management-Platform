@@ -166,6 +166,18 @@ geçmiş revizyonları viewer'da yan yana açılabilsin diye her versiyonun kend
 STEP'ten 300 MB'lık glb çıkar. Model bounding box'ına göre orantılı bir
 deflection ve üst sınırlı bir üçgen bütçesi uygulanmalı.
 
+  > **Ölçüldü (2026-08-28).** Ölçek iki ayrı eksen ve farklı yerleri zorluyor.
+  > 11 parçalı, 82.572 üçgenli bir boji montajı: 27 sn dönüşüm, 22 çizim
+  > çağrısı, M1 Pro'da 120 fps (ekranın tavanı), 20 MB GPU belleği. Sentetik
+  > 500 parçalı bir montaj (157.600 üçgen): 4,8 sn dönüşüm — parçalar
+  > geometrik olarak basit olduğu için daha hızlı — ama **1.000 çizim çağrısı**
+  > (parça başına bir gövde, bir de kenar seti) ve 502 satırlık bir ağaç.
+  > Etkileşim akıcı bildirildi; sayısını ölçmedim.
+  >
+  > Yani sınır üçgen sayısı değil, **parça sayısı**. Gerekirse ilk kaldıraç
+  > kenar çizgilerini malzemeye göre birleştirmek: çizim çağrısını yarıya
+  > indirir. Dosyayı `converter/scripts/make_large_assembly.py` üretiyor.
+
 `metadata.json` şeması kabaca:
 
 ```json
