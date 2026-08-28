@@ -35,6 +35,11 @@ export type Framing = {
   fadeDistance: number;
   /** Where the ground plane sits: level with the bottom of the model. */
   ground: [number, number, number];
+  /** Radius of a measurement point marker, in model units. */
+  markerRadius: number;
+  /** Dash pattern for the rubber band between two measurement points. */
+  dashSize: number;
+  gapSize: number;
 };
 
 /**
@@ -84,5 +89,12 @@ export function frameModel(bounds: BBox): Framing {
     sectionSize: niceStep(size / 10) * 5,
     fadeDistance: distance * 4,
     ground: [centre[0], centre[1], low[2]],
+    // Measurement marks are drawn in model units, so they have to be derived
+    // from the model like everything else. A fixed 0.6 mm ball is a reasonable
+    // dot on a 100 mm bracket and a boulder on a 4 mm part. The divisors below
+    // reproduce the sizes the viewer already used at around 100 mm.
+    markerRadius: size / 150,
+    dashSize: size / 60,
+    gapSize: size / 90,
   };
 }

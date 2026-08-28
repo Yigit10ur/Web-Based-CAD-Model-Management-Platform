@@ -94,13 +94,50 @@ describe('frameModel', () => {
     expect(frameModel(LARGE).cellSize).toBeGreaterThan(100);
   });
 
+  it('sizes measurement marks against the model, not the millimetre', () => {
+    // The complaint that prompted this: a fixed 0.6 mm marker on a 4 mm
+    // assembly is a third of the part, and the reading covers what it measures.
+    const small = frameModel(FAR_FROM_ORIGIN);
+    const smallSpan = 4; // the shortest edge of that assembly
+    expect(small.markerRadius).toBeLessThan(smallSpan / 20);
+
+    // The same fraction has to hold at the other end of the scale.
+    const large = frameModel(LARGE);
+    const ratio = (view: { markerRadius: number }, bounds: BBox) =>
+      view.markerRadius /
+      Math.hypot(
+        bounds[1][0] - bounds[0][0],
+        bounds[1][1] - bounds[0][1],
+        bounds[1][2] - bounds[0][2],
+      );
+    expect(ratio(large, LARGE)).toBeCloseTo(ratio(small, FAR_FROM_ORIGIN), 10);
+  });
+
+  it('keeps the rubber band dashed rather than solid at any scale', () => {
+    for (const bounds of [FAR_FROM_ORIGIN, NEAR_ORIGIN, LARGE]) {
+      const view = frameModel(bounds);
+      expect(view.dashSize).toBeGreaterThan(0);
+      expect(view.gapSize).toBeGreaterThan(0);
+    }
+  });
+
   it('survives a model with no extent', () => {
     const view = frameModel([
       [5, 5, 5],
       [5, 5, 5],
     ]);
-    for (const value of [...view.position, ...view.target, view.near, view.far, view.cellSize]) {
+    for (const value of [
+      ...view.position,
+      ...view.target,
+      view.near,
+      view.far,
+      view.cellSize,
+      view.markerRadius,
+      view.dashSize,
+      view.gapSize,
+    ]) {
       expect(Number.isFinite(value)).toBe(true);
+      expect(value).not.toBe(0);
     }
     expect(view.position).not.toEqual(view.target);
   });

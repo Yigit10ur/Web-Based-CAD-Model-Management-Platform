@@ -3,18 +3,25 @@
 import { Html, Line } from '@react-three/drei';
 import * as THREE from 'three';
 
+import type { Framing } from '@/lib/framing';
 import { useViewerStore } from '@/store/viewer-store';
 
 const PENDING_COLOR = '#f59e0b';
 const MEASURED_COLOR = '#0f766e';
 const HOVER_COLOR = '#2563eb';
 
-function Marker({ point, color }: { point: THREE.Vector3; color: string }) {
+function Marker({
+  point,
+  color,
+  radius,
+}: {
+  point: THREE.Vector3;
+  color: string;
+  radius: number;
+}) {
   return (
     <mesh position={point} raycast={() => null}>
-      {/* Sized in screen space would be better; at MVP model sizes a fixed
-          radius reads well enough and costs nothing. */}
-      <sphereGeometry args={[0.6, 16, 16]} />
+      <sphereGeometry args={[radius, 16, 16]} />
       <meshBasicMaterial color={color} depthTest={false} />
     </mesh>
   );
@@ -30,7 +37,11 @@ function Label({
   tone: 'hover' | 'measured';
 }) {
   return (
-    <Html position={point} center distanceFactor={120} zIndexRange={[10, 0]}>
+    // No distanceFactor: it scales the label by the camera's distance, so a
+    // reading grows as you zoom in to take it and swallows the feature being
+    // measured. A dimension is an annotation, not part of the model -- it
+    // belongs at a constant size on screen, the way a CAD drawing labels one.
+    <Html position={point} center zIndexRange={[10, 0]}>
       <div
         className={`pointer-events-none rounded px-1.5 py-0.5 font-mono text-[11px] whitespace-nowrap shadow-sm ${
           tone === 'hover' ? 'bg-blue-600 text-white' : 'bg-teal-700 text-white'
@@ -42,7 +53,7 @@ function Label({
   );
 }
 
-export function MeasureLayer() {
+export function MeasureLayer({ view }: { view: Framing }) {
   const tool = useViewerStore((state) => state.tool);
   const hover = useViewerStore((state) => state.hover);
   const pending = useViewerStore((state) => state.pending);
@@ -60,8 +71,8 @@ export function MeasureLayer() {
               lineWidth={2}
               depthTest={false}
             />
-            <Marker point={measurement.from} color={MEASURED_COLOR} />
-            <Marker point={measurement.to} color={MEASURED_COLOR} />
+            <Marker point={measurement.from} color={MEASURED_COLOR} radius={view.markerRadius} />
+            <Marker point={measurement.to} color={MEASURED_COLOR} radius={view.markerRadius} />
             <Label
               point={midpoint}
               text={`${measurement.distance.toFixed(2)} mm`}
@@ -71,7 +82,9 @@ export function MeasureLayer() {
         );
       })}
 
-      {pending && <Marker point={pending.point} color={PENDING_COLOR} />}
+      {pending && (
+        <Marker point={pending.point} color={PENDING_COLOR} radius={view.markerRadius} />
+      )}
 
       {/* The rubber band from the first point to wherever the cursor has
           snapped, so the length is readable before the second click. */}
@@ -82,8 +95,8 @@ export function MeasureLayer() {
             color={PENDING_COLOR}
             lineWidth={1.5}
             dashed
-            dashSize={1.5}
-            gapSize={1}
+            dashSize={view.dashSize}
+            gapSize={view.gapSize}
             depthTest={false}
           />
           <Label
@@ -96,7 +109,7 @@ export function MeasureLayer() {
 
       {tool === 'measure' && hover && (
         <>
-          <Marker point={hover.point} color={HOVER_COLOR} />
+          <Marker point={hover.point} color={HOVER_COLOR} radius={view.markerRadius} />
           {!pending && <Label point={hover.point} text={hover.label} tone="hover" />}
         </>
       )}
