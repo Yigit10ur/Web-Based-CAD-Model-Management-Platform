@@ -104,6 +104,18 @@ describe('what is refused', () => {
     expect(passwordProblem('a valid enough phrase', 'ab@ehsim.com')).toBeNull();
   });
 
+  it('does not refuse a long passphrase for containing a common word', () => {
+    // Found by using the reset form: `yeni bir uzun parola` was refused because
+    // it contains `parola`. A rule that refuses good passphrases is how people
+    // end up choosing worse ones.
+    expect(passwordProblem('yeni bir uzun parola', 'a@b.com')).toBeNull();
+    expect(passwordProblem('my password is a long one', 'a@b.com')).toBeNull();
+
+    // Still refused, because there the common word is most of what is there.
+    expect(passwordProblem('password123', 'a@b.com')).not.toBeNull();
+    expect(passwordProblem('qwertyuiop', 'a@b.com')).not.toBeNull();
+  });
+
   it('accepts length instead of demanding punctuation', () => {
     // Composition rules make passwords hard to remember more than hard to
     // guess; NIST 800-63B dropped them for that reason.

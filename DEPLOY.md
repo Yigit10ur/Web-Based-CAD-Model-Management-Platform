@@ -194,6 +194,30 @@ cd converter && ./.venv/bin/python -m app.worker --drain
 ever, which is what a permanent host would run. It reads `../web/.env.local` by
 default, so pass the production values explicitly if that is what you mean.
 
+## Email
+
+Resetting a password needs somewhere to send a link. Without one the
+application still runs -- the message is written to the log rather than sent --
+but nobody who forgets a password can get back in.
+
+Two values, in Vercel:
+
+- `MAIL_API_KEY` -- a Resend API key.
+- `MAIL_FROM` -- the address the mail comes from, in the form
+  `CAD Models <noreply@yourdomain>`.
+
+The provider is reached over plain HTTP from `lib/mail.ts`; swapping Resend for
+another service, or for SMTP, is a change to that one file.
+
+**The part that is not code:** a provider will only deliver to arbitrary
+addresses from a domain you have verified with it, which means adding DNS
+records for a domain you control. Until that is done, a free account will
+deliver only to the address it was registered with -- enough to test the flow,
+not enough to send anyone else a reset link.
+
+`SITE_URL` is optional: Vercel supplies the deployment's own URL, so links in
+email point at the deployment that sent them.
+
 ## Afterwards
 
 **Migrations** are run by hand against production, the same way as in step 1.

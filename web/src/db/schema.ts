@@ -25,6 +25,10 @@ import type { AdapterAccountType } from 'next-auth/adapters';
 
 export const visibilityEnum = pgEnum('visibility', ['private', 'public']);
 export const memberRoleEnum = pgEnum('member_role', ['owner', 'editor', 'viewer']);
+export const emailTokenPurposeEnum = pgEnum('email_token_purpose', [
+  'password_reset',
+  'email_verification',
+]);
 export const conversionStatusEnum = pgEnum('conversion_status', [
   // A version exists before its file does: the row is created first so the
   // upload has a key to write to. Only once the browser reports the upload
@@ -192,6 +196,30 @@ export const projectMembers = pgTable(
     role: memberRoleEnum('role').notNull().default('viewer'),
   },
   (table) => [uniqueIndex('project_members_pk').on(table.projectId, table.userId)],
+);
+
+/**
+ * A one-time link sent to an address, for resetting a password or proving that
+ * the address belongs to whoever is reading it.
+ *
+ * The token is stored hashed, exactly like a password. A reset link is a
+ * password for as long as it lives, and a database that can be read must not
+ * hand out working links. The row is deleted when it is used, so a link works
+ * once.
+ */
+export const emailTokens = pgTable(
+  'email_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** The address the link was sent to, lowercased. */
+    email: text('email').notNull(),
+    purpose: emailTokenPurposeEnum('purpose').notNull(),
+    /** SHA-256 of the token in the link. The link itself is never stored. */
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('email_tokens_email_idx').on(table.email, table.purpose)],
 );
 
 /**
