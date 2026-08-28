@@ -5,14 +5,15 @@
 | Piece | Host | Why there |
 |---|---|---|
 | `web` | Vercel | It is a Next.js app; nothing else is simpler |
-| `converter` | Fly.io | Needs a container, and Fly builds the image remotely |
+| `converter` | GitHub Actions | Too large for a function, and this needs no new account |
 | Postgres, object storage | Supabase | Already in use, and one account covers both |
 
 ## Before you start
 
-You will need a Vercel account, a Fly.io account, and a GitHub OAuth app. All
-three are free to create. Everything below is done by you rather than by an
-agent, because it involves signing in to accounts and handling secrets.
+You will need a Vercel account and a GitHub OAuth app, both free. There is no
+account to open for the converter: it runs as a GitHub Actions job in this
+repository. Everything below is done by you rather than by an agent, because it
+involves signing in to accounts and handling secrets.
 
 ## 1. A separate production database
 
@@ -103,86 +104,95 @@ Environment variables:
 Use a **different** `AUTH_SECRET` from development. A secret that has been in a
 file on a laptop is not a production secret.
 
-## 4. Converter, on Fly
+## 4. Converter
 
-```bash
-cd converter
-fly apps create cad-converter          # `fly launch` would rewrite fly.toml
-
-cp .env.fly.example .env.fly           # then fill it in
-grep -vE '^#|^$' .env.fly | fly secrets import --stage
-
-fly deploy --remote-only
-```
-
-Secrets are piped from a file rather than passed as arguments: `fly secrets
-set KEY=value` leaves the value in your shell history, and a storage secret
-does not belong there. `.env.fly` is gitignored, and you can delete it once the
-secrets are set — Fly keeps them.
-
-`fly deploy` builds the image on Fly's builder, so this works from a machine
-with no Docker installed.
-
-The worker needs no `AUTH_*` values: it never serves a request and has no users.
-
-**This image has never been built.** Expect the first `fly deploy` to be where
-you find that out. The likely trouble is the `cadquery-ocp` wheel: it is large,
-and the build may need more memory than the default builder gives it
-(`fly deploy --build-only --remote-only` to iterate faster).
+Nothing to deploy. The workflow is in the repository; it needs the secrets
+listed under **Where the converter runs** below, and the two Vercel values that
+let the web application start a run.
 
 ## 5. Check it works
 
+In the browser: sign in with GitHub, upload a STEP file, and watch it go
+`queued` → `processing` → `ready`. The Actions tab shows the run that did it.
+
+A run that finds nothing to do says so and stops:
+
+```
+draining the queue
+queue empty after 0 job(s)
+```
+
+If OCCT did not install, the worker exits immediately with a message saying so
+rather than accepting jobs it cannot do.
+
+A file that stays `queued` means no run was started: check that
+`GITHUB_DISPATCH_TOKEN` is set in Vercel and still valid. The file is not lost
+— start a run by hand and it will be picked up.
+
+## Where the converter runs
+
+Nowhere, between uploads. A GitHub Actions run is started when a file is
+uploaded, converts everything waiting and exits.
+
+That is not the obvious design, so here is why. OpenCascade is 221 MB
+installed, and Vercel's function bundle limit is 250 MB -- the geometry kernel
+alone does not fit beside the web application, before any of its dependencies.
+The usual answer is a container host. Where none is available, a CI runner is
+the next thing that can hold a package that size: this repository is public, so
+Actions minutes are free and unmetered.
+
+The queue is unchanged and remains the source of truth. `FOR UPDATE SKIP
+LOCKED` does not care whether two workers are two containers or two CI runs
+that overlapped, and an upload that never manages to summon one waits in the
+queue rather than being lost.
+
+**This is a bridge, not a destination.** Actions is a CI system, not a job
+queue: expect a minute or two before a run starts, and no guarantees about
+when. If the project ever converts files regularly, move the worker to a
+container host -- it is a change to one workflow file, because the worker
+already runs anywhere the database is reachable.
+
+### What has to be configured
+
+The workflow needs the production database and bucket, as repository secrets:
+
 ```bash
-fly logs
+gh secret set DATABASE_URL --body "..."
+gh secret set STORAGE_ENDPOINT --body "..."
+gh secret set STORAGE_REGION --body "..."
+gh secret set STORAGE_BUCKET --body "..."
+gh secret set STORAGE_ACCESS_KEY_ID --body "..."
+gh secret set STORAGE_SECRET_ACCESS_KEY --body "..."
 ```
 
-The worker announces itself and then says nothing while the queue is empty:
+Secrets are not readable from a workflow log or from a fork, but anyone who can
+push to the default branch can read them by writing a workflow that does. On a
+public repository with one collaborator that is the same trust as deploying,
+but it is worth knowing rather than discovering.
 
-```
-worker started, polling every 5.0s
-```
+The web application needs to be able to start a run, which is two more values
+in Vercel:
 
-If OCCT did not install, it exits immediately with a message saying so rather
-than accepting jobs it cannot do.
+- `GITHUB_DISPATCH_TOKEN` -- a fine-grained personal access token for this
+  repository with **Contents: read and write**, which is the permission
+  `repository_dispatch` is filed under.
+- `GITHUB_REPOSITORY` -- `owner/repo`.
 
-Then, in the browser: sign in with GitHub, upload a STEP file, and watch it go
-`queued` → `converting` → `ready`.
+Leave both unset in development. Without them the web application does not try
+to summon anything, which is right: locally you run the worker yourself.
 
-## Running the converter only when you need it
+### Running it by hand
 
-A Fly machine is billed while it runs, and the worker's design is to poll --
-so left alone it runs, and bills, around the clock to wait for uploads that
-mostly are not coming. For a project that converts a handful of files a week,
-that is the wrong trade.
-
-So the converter is normally scaled to zero:
+Either from the Actions tab (**convert** -> Run workflow), or against the
+production database from your own machine:
 
 ```bash
-cd converter
-fly scale count worker=1 --app cad-converter --yes    # before converting
-fly scale count worker=0 --app cad-converter --yes    # after
+cd converter && ./.venv/bin/python -m app.worker --drain
 ```
 
-It takes about twenty seconds to come up and then works through whatever has
-accumulated. **Nothing is lost while it is down**: an upload still reaches
-storage and still gets its row, and simply sits at `queued` until a worker
-claims it. The catalogue shows that status honestly rather than pretending the
-file failed.
-
-The alternative is to run the worker on your own machine against the
-production database, which costs nothing at all:
-
-```bash
-cd converter && ./.venv/bin/python -m app.worker
-```
-
-It reads `../web/.env.local` by default, so pass the production values
-explicitly if that is what you want it to work on.
-
-A third option, not built: give the worker an HTTP endpoint, have the web app
-call it after an upload, and let Fly start and stop the machine around each
-request. That would make the cost proportional to the work instead of to the
-calendar, and it is the right answer if this ever converts files regularly.
+`--drain` converts what is waiting and exits; without it the worker polls for
+ever, which is what a permanent host would run. It reads `../web/.env.local` by
+default, so pass the production values explicitly if that is what you mean.
 
 ## Afterwards
 
@@ -192,7 +202,8 @@ schema change nobody read.
 
 **Every merge to `main` deploys the web app.** CI runs on every pull request,
 so what reaches `main` has already been linted, typechecked, tested and built.
-The converter deploys only when you run `fly deploy`.
+The converter has nothing to deploy: a run checks the repository out and
+installs what it needs, so `main` is what converts your files.
 
-**Secrets live in Vercel and Fly**, never in the repository. `web/.env.local`
-is for your machine and is gitignored.
+**Secrets live in Vercel and in the repository's Actions secrets**, never in
+the repository itself. `web/.env.local` is for your machine and is gitignored.

@@ -87,7 +87,15 @@ flowchart LR
 
 ### Deploy
 - Next.js → **Vercel**
-- Converter → **Fly.io / Railway** (Docker)
+- Converter → **GitHub Actions**, yükleme başına bir çalışma
+
+  > **2026-08-28'de değişti.** Plan bir konteyner barındırıcısıydı ve düzenli
+  > trafik için doğru cevap hâlâ o. Vercel dışında bir barındırma yoksa
+  > converter'ı serverless bir fonksiyona taşımak da mümkün değil: OpenCascade
+  > kurulu halde 221 MB, Vercel'in paket sınırı 250 MB. Repo public olduğu için
+  > Actions dakikaları ücretsiz, ve kuyruk worker'ının nerede koştuğunu
+  > umursamıyor — `FOR UPDATE SKIP LOCKED` çakışan iki CI çalışmasına da iki
+  > konteynere davrandığı gibi davranır.
 - Storage → **R2**
 
 ---
@@ -310,7 +318,7 @@ işi böyle geri gelir.
 |---|---|
 | ~~OCCT kurulumu~~ | **Elendi (2026-08-24).** Kurulum yerel ortamda doğrulandı; bölüm 3'teki nota bakınız. |
 | OCCT API öğrenme eğrisi | Kalan risk. 1. haftada uçtan uca tek bir STEP dönüşümü bitmeli. |
-| Dockerfile hiç build edilmedi | Hâlâ açık. Yerel geliştirme onu hiç gerektirmiyor, dolayısıyla imaj doğrulanmadı ve yazıldığı makinede Docker yok. `fly deploy` uzaktan build ediyor, cevap orada alınacak — DEPLOY.md'ye bakınız. Konteyner artık sağlık API'si yerine worker'ı çalıştırıyor; deploy'un ihtiyacı olan bu. |
+| Dockerfile hiç build edilmedi | Hâlâ açık. Yerel geliştirme onu hiç gerektirmiyor, dolayısıyla imaj doğrulanmadı ve yazıldığı makinede Docker yok. Deploy artık ona ihtiyaç duymuyor: converter, paketi doğrudan kuran bir CI runner'ında çalışıyor. İmaj, ileride bir konteyner barındırıcısı mümkün olursa oraya geçişin yolu olarak duruyor. Konteyner artık sağlık API'si yerine worker'ı çalıştırıyor; deploy'un ihtiyacı olan bu. |
 | ~~IGES hiç denenmedi~~ | **Kapandı.** Üretilmiş bir IGES fixture'ı, OCCT'nin kurulu olduğu her yerde test paketi tarafından çevriliyor — yerelde ve Docker imajında; CI işi geometri testlerini bilerek atlıyor. Geometri exact; format ürün yapısı taşımadığı için montaj tek isimsiz parça olarak geliyor. |
 | Devasa STEP dosyaları | Deflection'ı bbox'a göre ölçekle, üçgen bütçesi koy, dosya boyutu üst sınırı uygula. |
 | ~~Ölçüm doğruluğu~~ | **Çözüldü.** Converter `snap` bloğunu (vertex, kenar, yüzey tanımları) yayıyor; viewer ölçümü buna snap'liyor, mesh'e değil. Köşe-köşe ölçüm 40×20 plakanın köşegeninde 44.72 mm veriyor. |

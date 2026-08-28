@@ -90,7 +90,15 @@ flowchart LR
 
 ### Deployment
 - Next.js → **Vercel**
-- Converter → **Fly.io / Railway** (Docker)
+- Converter → **GitHub Actions**, one run per upload
+
+  > **Changed 2026-08-28.** A container host was the plan, and remains the
+  > better answer for steady traffic. Where no hosting beyond Vercel is
+  > available, the converter cannot simply move into a serverless function:
+  > OpenCascade is 221 MB installed against Vercel's 250 MB bundle limit. The
+  > repository is public, so Actions minutes are free, and the queue does not
+  > care where its workers run -- `FOR UPDATE SKIP LOCKED` treats two
+  > overlapping CI runs exactly as it treats two containers.
 - Storage → **R2**
 
 ---
@@ -317,7 +325,7 @@ which is how a crashed worker's job comes back.
 |---|---|
 | ~~OCCT setup~~ | **Retired 2026-08-24.** Installation verified locally; see the note in section 3. |
 | OCCT API learning curve | The remaining risk. One end-to-end STEP conversion must be done in week 1. |
-| The Dockerfile has never been built | Still open. Local development never needs it, so the image is unverified, and there is no Docker on the machine it was written on. `fly deploy` builds remotely, which is where this gets answered -- see DEPLOY.md. The container now runs the worker rather than the health API, which is what deployment actually needs. |
+| The Dockerfile has never been built | Still open. Local development never needs it, so the image is unverified, and there is no Docker on the machine it was written on. Deployment no longer needs it: the converter runs on a CI runner that installs the package directly. The image is still the way onto a container host if one ever becomes available. The container now runs the worker rather than the health API, which is what deployment actually needs. |
 | ~~IGES never tried~~ | **Closed.** A generated IGES fixture is converted by the test suite wherever OCCT is installed -- locally and in the Docker image, not in the CI job, which skips the geometry tests by design. The geometry is exact; the format carries no product structure, so an assembly arrives as one unnamed part. |
 | Very large STEP files | Scale deflection with the bounding box, cap the triangle budget, enforce a file size limit. |
 | ~~Measurement accuracy~~ | **Solved.** The converter emits a `snap` block (vertices, edges, face definitions) and the viewer snaps measurements to it rather than to the mesh. A corner-to-corner measurement across the 40×20 plate reads 44.72 mm. |

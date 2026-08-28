@@ -13,6 +13,7 @@ import json
 import logging
 import re
 import signal
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -195,7 +196,16 @@ def fail(conn: psycopg.Connection, version_id: str, message: str) -> None:
         cursor.execute(FAIL_SQL, (message[:2000], version_id))
 
 
-def run() -> None:
+def run(drain: bool = False) -> None:
+    """Poll the queue forever, or -- with `drain` -- until it is empty.
+
+    Draining is how the converter runs without a server to run it on. A CI job
+    is started when something is uploaded, converts everything that has
+    accumulated and exits, so nothing is billed or maintained between uploads.
+    The queue does not care where its workers live: two of them claiming rows
+    through `FOR UPDATE SKIP LOCKED` behave the same whether they are two
+    containers or two CI runs that happened to overlap.
+    """
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s"
     )
@@ -222,7 +232,12 @@ def run() -> None:
         )
 
     conn = connect()
-    logger.info("worker started, polling every %.1fs", settings.poll_interval)
+    converted = 0
+
+    if drain:
+        logger.info("draining the queue")
+    else:
+        logger.info("worker started, polling every %.1fs", settings.poll_interval)
 
     while not stopping:
         try:
@@ -230,12 +245,18 @@ def run() -> None:
             job = claim(conn)
         except psycopg.Error:
             logger.exception("database error while claiming; retrying")
+            if drain:
+                raise
             time.sleep(settings.poll_interval)
             continue
 
         if job is None:
+            if drain:
+                break
             time.sleep(settings.poll_interval)
             continue
+
+        converted += 1
 
         try:
             process(conn, job)
@@ -244,8 +265,13 @@ def run() -> None:
         except Exception as error:  # noqa: BLE001 - the job must not take the worker down
             fail(conn, job["id"], f"{type(error).__name__}: {error}")
 
+    if drain:
+        logger.info("queue empty after %d job(s)", converted)
+
     conn.close()
 
 
 if __name__ == "__main__":
-    run()
+    # `--drain` converts what is waiting and exits, for a runner that is
+    # started per upload rather than left running.
+    run(drain="--drain" in sys.argv[1:])
