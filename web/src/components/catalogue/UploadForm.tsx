@@ -5,19 +5,33 @@ import { useRef, useState } from 'react';
 
 import { stageLabel, uploadCadFile, type UploadStage } from '@/lib/upload';
 
-export function UploadForm() {
+export type Destination = { id: string; name: string };
+
+export function UploadForm({ destinations }: { destinations: Destination[] }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [stage, setStage] = useState<UploadStage>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState(destinations[0]?.id);
 
   const busy = stage !== 'idle';
+
+  // Someone who is only a viewer everywhere has nowhere to put a file, and a
+  // button that always fails is worse than no button.
+  if (destinations.length === 0) {
+    return (
+      <p className="text-xs text-slate-500">
+        You have view-only access to the projects you are in, so there is nowhere to upload
+        to.
+      </p>
+    );
+  }
 
   async function upload(file: File) {
     setError(null);
 
     try {
-      await uploadCadFile(file, {}, setStage);
+      await uploadCadFile(file, { projectId }, setStage);
       router.refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -38,6 +52,23 @@ export function UploadForm() {
         >
           {stageLabel(stage, 'Upload model')}
         </button>
+
+        {/* Only worth asking when there is a choice to make. */}
+        {destinations.length > 1 && (
+          <select
+            value={projectId}
+            onChange={(event) => setProjectId(event.target.value)}
+            disabled={busy}
+            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-700"
+            aria-label="Project to upload into"
+          >
+            {destinations.map((destination) => (
+              <option key={destination.id} value={destination.id}>
+                {destination.name}
+              </option>
+            ))}
+          </select>
+        )}
 
         <span className="text-xs text-slate-500">STEP, IGES, STL, OBJ, PLY, glTF</span>
       </div>

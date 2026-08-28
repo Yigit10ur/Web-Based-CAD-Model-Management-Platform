@@ -33,8 +33,16 @@ function Status({ version }: { version: ModelVersion }) {
   );
 }
 
-export function ModelList({ models }: { models: ModelWithVersions[] }) {
+export function ModelList({
+  models,
+  projects = [],
+}: {
+  models: ModelWithVersions[];
+  /** Empty when there is only one project: the label would say nothing. */
+  projects?: { id: string; name: string }[];
+}) {
   const router = useRouter();
+  const projectName = new Map(projects.map((project) => [project.id, project.name]));
 
   // Conversion happens in another process, so the page has no way of being
   // told when it finishes. Poll only while something is actually in flight.
@@ -81,6 +89,11 @@ export function ModelList({ models }: { models: ModelWithVersions[] }) {
               )}
 
               <p className="truncate text-xs text-slate-400">
+                {projectName.has(model.projectId) && (
+                  <span className="text-slate-500">
+                    {projectName.get(model.projectId)} ·{' '}
+                  </span>
+                )}
                 {model.versions.length} version{model.versions.length === 1 ? '' : 's'}
                 {latest && ` · ${latest.sourceFormat.toUpperCase()}`}
                 {latest && ` · ${formatSize(latest.sourceSizeBytes)}`}

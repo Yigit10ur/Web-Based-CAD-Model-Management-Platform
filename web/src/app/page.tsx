@@ -6,7 +6,8 @@ import { ModelList, type ModelWithVersions } from '@/components/catalogue/ModelL
 import { UploadForm } from '@/components/catalogue/UploadForm';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import { db, schema } from '@/db';
-import { currentUser, personalProject, readableProjects } from '@/lib/session';
+import { projectsFor } from '@/lib/projects';
+import { currentUser, personalProject, readableProjects, writableProjects } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,8 +76,15 @@ export default async function Home() {
   if (!user) redirect('/sign-in');
 
   let models: ModelWithVersions[];
+  let projects: Awaited<ReturnType<typeof projectsFor>>;
+  let destinations: { id: string; name: string }[];
   try {
     models = await loadModels(user.id);
+    projects = await projectsFor(user.id);
+    destinations = (await writableProjects(user.id)).map((project) => ({
+      id: project.id,
+      name: project.name,
+    }));
   } catch (cause) {
     return (
       <main className="min-h-dvh bg-slate-50">
@@ -91,6 +99,9 @@ export default async function Home() {
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
           <h1 className="text-base font-medium text-slate-900">CAD Models</h1>
           <div className="flex items-center gap-4">
+            <Link href="/projects" className="text-xs text-slate-500 hover:underline">
+              projects
+            </Link>
             <Link href="/sample" className="text-xs text-slate-500 hover:underline">
               sample
             </Link>
@@ -100,9 +111,14 @@ export default async function Home() {
       </header>
 
       <div className="mx-auto max-w-3xl px-6 py-6">
-        <UploadForm />
+        <UploadForm destinations={destinations} />
         <div className="pt-4">
-          <ModelList models={models} />
+          {/* Which project a model is in only means something once there is
+              more than one to tell apart. */}
+          <ModelList
+            models={models}
+            projects={projects.length > 1 ? projects : []}
+          />
         </div>
       </div>
     </main>
