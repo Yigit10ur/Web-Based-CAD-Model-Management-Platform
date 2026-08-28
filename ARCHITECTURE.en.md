@@ -169,6 +169,18 @@ When a `model_versions` row with `status = 'queued'` is picked up:
 produces a 300 MB glb. Deflection should scale with the model's bounding box,
 under a capped triangle budget.
 
+  > **Measured 2026-08-28.** Scale has two axes and they strain different
+  > things. A bogie assembly of 11 parts and 82,572 triangles: 27 s to convert,
+  > 22 draw calls, 120 fps on an M1 Pro (the display's ceiling), 20 MB of GPU
+  > memory. A synthetic 500-part assembly of 157,600 triangles: 4.8 s to
+  > convert -- faster, because its parts are geometrically simple -- but
+  > **1,000 draw calls** (a solid and an edge set each) and a tree of 502 rows.
+  > Interaction was reported smooth; the figure was not measured.
+  >
+  > So the limit is part count rather than triangle count. The first lever, if
+  > one is needed, is merging the edge lines by material, which halves the draw
+  > calls. The file comes from `converter/scripts/make_large_assembly.py`.
+
 The rough shape of `metadata.json`:
 
 ```json
