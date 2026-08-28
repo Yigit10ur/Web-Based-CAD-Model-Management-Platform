@@ -227,9 +227,23 @@ export async function cancelInvitation(projectId: string, email: string) {
  * Called when someone signs in. Their account may be minutes old, so this is
  * the first moment the invitations sent to their address can be attached to
  * anything.
+ *
+ * Only for an address that has been proved. An invitation is addressed to a
+ * person by their email, so opening it for anyone who merely typed that email
+ * into a registration form would make sharing forgeable: register as your
+ * colleague, collect what was meant for them. Signing in through GitHub counts
+ * as proof -- GitHub only gives us an address it has verified -- and a password
+ * account proves it by following a link sent there.
+ *
+ * The check is here rather than at the call sites so that there is one of it.
  */
 export async function claimInvitations(userId: string, email: string): Promise<number> {
   const address = email.trim().toLowerCase();
+
+  const user = await db.query.users.findFirst({
+    where: eq(schema.users.id, userId),
+  });
+  if (!user?.emailVerified) return 0;
 
   const waiting = await db.query.projectInvitations.findMany({
     where: eq(schema.projectInvitations.email, address),

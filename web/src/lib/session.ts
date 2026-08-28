@@ -56,6 +56,17 @@ export async function requireUser(): Promise<CurrentUser> {
  * keeps the data model honest -- models always belong to a project owned by
  * somebody -- without asking the user to think about it.
  */
+/**
+ * Whether this account's address has been proved.
+ *
+ * Read from the row rather than from the session: the session was minted when
+ * they signed in, and confirming an address afterwards must not need a new one.
+ */
+export async function emailVerified(userId: string): Promise<boolean> {
+  const user = await db.query.users.findFirst({ where: eq(schema.users.id, userId) });
+  return Boolean(user?.emailVerified);
+}
+
 export async function personalProject(userId: string): Promise<string> {
   const existing = await db.query.projects.findFirst({
     where: and(eq(schema.projects.ownerId, userId), eq(schema.projects.slug, 'personal')),

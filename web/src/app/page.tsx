@@ -5,9 +5,16 @@ import { redirect } from 'next/navigation';
 import { ModelList, type ModelWithVersions } from '@/components/catalogue/ModelList';
 import { UploadForm } from '@/components/catalogue/UploadForm';
 import { SignOutButton } from '@/components/auth/SignOutButton';
+import { VerifyBanner } from '@/components/auth/VerifyBanner';
 import { db, schema } from '@/db';
 import { projectsFor } from '@/lib/projects';
-import { currentUser, personalProject, readableProjects, writableProjects } from '@/lib/session';
+import {
+  currentUser,
+  emailVerified,
+  personalProject,
+  readableProjects,
+  writableProjects,
+} from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,6 +85,7 @@ export default async function Home() {
   let models: ModelWithVersions[];
   let projects: Awaited<ReturnType<typeof projectsFor>>;
   let destinations: { id: string; name: string }[];
+  let verified = true;
   try {
     models = await loadModels(user.id);
     projects = await projectsFor(user.id);
@@ -85,6 +93,7 @@ export default async function Home() {
       id: project.id,
       name: project.name,
     }));
+    verified = await emailVerified(user.id);
   } catch (cause) {
     return (
       <main className="min-h-dvh bg-slate-50">
@@ -111,6 +120,12 @@ export default async function Home() {
       </header>
 
       <div className="mx-auto max-w-3xl px-6 py-6">
+        {!verified && (
+          <div className="pb-4">
+            <VerifyBanner email={user.email} />
+          </div>
+        )}
+
         <UploadForm destinations={destinations} />
         <div className="pt-4">
           {/* Which project a model is in only means something once there is
