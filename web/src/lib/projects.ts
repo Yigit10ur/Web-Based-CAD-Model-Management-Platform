@@ -5,9 +5,10 @@
  * making a project, and moving people in and out of one.
  */
 
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import { db, schema } from '@/db';
+import { readableProjects } from '@/lib/session';
 
 export type MemberRole = (typeof schema.memberRoleEnum.enumValues)[number];
 
@@ -79,6 +80,55 @@ export async function createProject(userId: string, name: string, description?: 
   }
 
   throw new Error(`could not find a free slug for ${name}`);
+}
+
+export type ProjectSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  role: MemberRole;
+  memberCount: number;
+};
+
+/**
+ * The projects a user can see, each with the role they hold in it.
+ *
+ * Shared by the API and the pages that render it, so that the badge on screen
+ * and the answer the API gives cannot drift apart.
+ */
+export async function projectsFor(userId: string): Promise<ProjectSummary[]> {
+  const readable = await readableProjects(userId);
+  if (readable.length === 0) return [];
+
+  const projects = await db.query.projects.findMany({
+    where: inArray(schema.projects.id, readable),
+  });
+
+  const memberships = await db.query.projectMembers.findMany({
+    where: inArray(schema.projectMembers.projectId, readable),
+  });
+
+  const mine = new Map(
+    memberships
+      .filter((membership) => membership.userId === userId)
+      .map((membership) => [membership.projectId, membership.role]),
+  );
+
+  return projects
+    .map((project) => ({
+      id: project.id,
+      name: project.name,
+      slug: project.slug,
+      description: project.description,
+      // Ownership of the row wins over a membership row that disagrees with
+      // it, the same way it does in the access checks.
+      role: (project.ownerId === userId
+        ? 'owner'
+        : (mine.get(project.id) ?? 'viewer')) as MemberRole,
+      memberCount: memberships.filter((m) => m.projectId === project.id).length,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** Everyone in a project: members who have an account, and invitations waiting. */

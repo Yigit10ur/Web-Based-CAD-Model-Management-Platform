@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 
 import { RevisionUpload } from '@/components/catalogue/RevisionUpload';
 import { ModelWorkspace } from '@/components/viewer/ModelWorkspace';
-import { currentUser, readableModel } from '@/lib/session';
+import { canWrite, currentUser, readableModel } from '@/lib/session';
 import { presignDownload } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
@@ -25,6 +25,11 @@ export default async function ModelPage({ params, searchParams }: Props) {
   // exist.
   const model = await readableModel(id, user.id);
   if (!model) notFound();
+
+  // A viewer can open this model but not add to it. Showing them the button
+  // and answering 404 when they press it is not a permission check, it is a
+  // trap.
+  const writable = await canWrite(model.projectId, user.id);
 
   const versions = [...model.versions].sort((a, b) => b.versionNo - a.versionNo);
 
@@ -95,7 +100,7 @@ export default async function ModelPage({ params, searchParams }: Props) {
 
           {version && <span>{version.sourceFormat.toUpperCase()}</span>}
 
-          <RevisionUpload modelId={model.id} converting={converting} />
+          {writable && <RevisionUpload modelId={model.id} converting={converting} />}
         </div>
       </header>
 

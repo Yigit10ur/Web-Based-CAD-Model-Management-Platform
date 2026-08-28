@@ -18,6 +18,9 @@ export type UploadStage = 'idle' | 'creating' | 'uploading' | 'queueing';
 export interface UploadTarget {
   /** Omit to create a new model; pass an id to add a revision to one. */
   modelId?: string;
+  /** Which project a new model goes into. Ignored when adding a revision: a
+   *  revision belongs wherever its model already is. */
+  projectId?: string;
 }
 
 export interface UploadResult {
@@ -52,6 +55,7 @@ export async function uploadCadFile(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       name: file.name.replace(/\.[^.]+$/, ''),
+      projectId: target.projectId,
       filename: file.name,
       contentType,
       sizeBytes: file.size,
