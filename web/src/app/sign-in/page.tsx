@@ -1,6 +1,8 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import { devSignInEnabled, githubEnabled, signIn } from '@/auth';
+import { githubEnabled, signIn } from '@/auth';
+import { SignInForm } from '@/components/auth/SignInForm';
 import { currentUser } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
@@ -17,64 +19,33 @@ export default async function SignInPage() {
         </p>
 
         {githubEnabled && (
-          <form
-            action={async () => {
-              'use server';
-              await signIn('github', { redirectTo: '/' });
-            }}
-          >
-            <button
-              type="submit"
-              className="w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          <>
+            <form
+              action={async () => {
+                'use server';
+                await signIn('github', { redirectTo: '/' });
+              }}
             >
-              Continue with GitHub
-            </button>
-          </form>
+              <button
+                type="submit"
+                className="w-full rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+              >
+                Continue with GitHub
+              </button>
+            </form>
+
+            <p className="py-4 text-center text-xs text-slate-400">or</p>
+          </>
         )}
 
-        {devSignInEnabled && (
-          <form
-            action={async (formData: FormData) => {
-              'use server';
-              await signIn('dev', {
-                email: formData.get('email'),
-                redirectTo: '/',
-              });
-            }}
-            className="pt-4"
-          >
-            {githubEnabled && (
-              <p className="pb-3 text-center text-xs text-slate-400">or, on this machine</p>
-            )}
+        <SignInForm />
 
-            <input
-              name="email"
-              type="email"
-              required
-              defaultValue="dev@localhost"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              aria-label="Email"
-            />
-            <button
-              type="submit"
-              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-            >
-              Development sign-in
-            </button>
-            {/* Only rendered off a development build; there is no password
-                here and there must never be one in production. */}
-            <p className="pt-2 text-center text-[11px] text-slate-400">
-              Development only — no password, not available in production.
-            </p>
-          </form>
-        )}
-
-        {!githubEnabled && !devSignInEnabled && (
-          <p className="text-sm text-red-700">
-            No sign-in provider is configured. Set AUTH_GITHUB_ID and
-            AUTH_GITHUB_SECRET.
-          </p>
-        )}
+        <p className="pt-4 text-center text-xs text-slate-500">
+          No account yet?{' '}
+          <Link href="/register" className="text-blue-600 hover:underline">
+            Create one
+          </Link>
+        </p>
       </div>
     </main>
   );
