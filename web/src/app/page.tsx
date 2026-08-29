@@ -106,7 +106,7 @@ export default async function Home() {
     <main className="min-h-dvh bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
-          <h1 className="text-base font-medium text-slate-900">CAD Models</h1>
+          <h1 className="text-base font-medium text-slate-900">EhsimCAD</h1>
           <div className="flex items-center gap-4">
             <Link href="/projects" className="text-xs text-slate-500 hover:underline">
               projects
