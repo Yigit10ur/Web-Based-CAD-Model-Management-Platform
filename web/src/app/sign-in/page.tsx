@@ -13,7 +13,7 @@ export default async function SignInPage() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-slate-50 px-6">
       <div className="w-full max-w-sm">
-        <h1 className="text-base font-medium text-slate-900">CAD Models</h1>
+        <h1 className="text-base font-medium text-slate-900">EhsimCAD</h1>
         <p className="pt-1 pb-6 text-sm text-slate-500">
           Sign in to upload and inspect models.
         </p>

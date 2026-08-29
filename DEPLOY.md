@@ -204,7 +204,7 @@ Two values, in Vercel:
 
 - `MAIL_API_KEY` -- a Resend API key.
 - `MAIL_FROM` -- the address the mail comes from, in the form
-  `CAD Models <noreply@yourdomain>`.
+  `EhsimCAD <noreply@yourdomain>`.
 
 The provider is reached over plain HTTP from `lib/mail.ts`; swapping Resend for
 another service, or for SMTP, is a change to that one file.
