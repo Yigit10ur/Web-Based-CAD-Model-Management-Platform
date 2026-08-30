@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { Model, ModelVersion } from '@/db/schema';
 
@@ -36,13 +36,45 @@ function Status({ version }: { version: ModelVersion }) {
 export function ModelList({
   models,
   projects = [],
+  deletable = [],
 }: {
   models: ModelWithVersions[];
   /** Empty when there is only one project: the label would say nothing. */
   projects?: { id: string; name: string }[];
+  /**
+   * Ids the signed-in user may delete, decided by the same rule the API
+   * applies. Anything not in here simply has no button, rather than a button
+   * that fails.
+   */
+  deletable?: string[];
 }) {
   const router = useRouter();
   const projectName = new Map(projects.map((project) => [project.id, project.name]));
+  const canDelete = new Set(deletable);
+
+  // Which row is asking to be confirmed, and which is being deleted. One at a
+  // time: two half-confirmed deletions on screen is how the wrong one gets
+  // pressed.
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function remove(id: string) {
+    setBusy(id);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/models/${id}`, { method: 'DELETE' });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error ?? `failed (${response.status})`);
+      setConfirming(null);
+      router.refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setBusy(null);
+    }
+  }
 
   // Conversion happens in another process, so the page has no way of being
   // told when it finishes. Poll only while something is actually in flight.
@@ -102,9 +134,50 @@ export function ModelList({
             </div>
 
             {latest && <Status version={latest} />}
+
+            {canDelete.has(model.id) &&
+              (confirming === model.id ? (
+                <span className="flex shrink-0 items-center gap-2">
+                  {/* The count is the part worth reading twice: deleting a
+                      model takes its revisions with it. */}
+                  <span className="text-xs text-slate-500">
+                    delete all {model.versions.length} version
+                    {model.versions.length === 1 ? '' : 's'}?
+                  </span>
+                  <button
+                    type="button"
+                    disabled={busy === model.id}
+                    onClick={() => remove(model.id)}
+                    className="rounded bg-red-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-red-700 disabled:bg-slate-300"
+                  >
+                    {busy === model.id ? 'deleting…' : 'delete'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy === model.id}
+                    onClick={() => setConfirming(null)}
+                    className="text-xs text-slate-500 hover:underline"
+                  >
+                    cancel
+                  </button>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setConfirming(model.id);
+                  }}
+                  className="shrink-0 text-xs text-slate-400 hover:text-red-700 hover:underline"
+                >
+                  delete
+                </button>
+              ))}
           </li>
         );
       })}
+
+      {error && <li className="py-2 text-xs text-red-700">{error}</li>}
     </ul>
   );
 }

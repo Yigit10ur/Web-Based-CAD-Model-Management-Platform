@@ -11,6 +11,7 @@ import { and, eq, inArray, or } from 'drizzle-orm';
 
 import { auth } from '@/auth';
 import { db, schema } from '@/db';
+import { mayDelete } from '@/lib/models';
 
 export class UnauthorizedError extends Error {
   constructor() {
@@ -194,6 +195,36 @@ export async function readableModel(modelId: string, userId: string) {
 
   const allowed = await readableProjects(userId);
   return allowed.includes(model.projectId) ? model : null;
+}
+
+/**
+ * A model the user is allowed to delete, or null.
+ *
+ * Separate from `writableModel` on purpose. Adding a revision and destroying
+ * someone else's upload are not the same permission, and the rule that tells
+ * them apart lives in `lib/models.ts` so the catalogue and this check cannot
+ * drift.
+ */
+export async function deletableModel(modelId: string, userId: string) {
+  const model = await db.query.models.findFirst({
+    where: eq(schema.models.id, modelId),
+    with: { versions: true },
+  });
+  if (!model) return null;
+
+  const project = await db.query.projects.findFirst({
+    where: eq(schema.projects.id, model.projectId),
+  });
+  if (!project) return null;
+
+  const membership = await db.query.projectMembers.findFirst({
+    where: and(
+      eq(schema.projectMembers.projectId, model.projectId),
+      eq(schema.projectMembers.userId, userId),
+    ),
+  });
+
+  return mayDelete(model, project, membership?.role ?? null, userId) ? model : null;
 }
 
 export async function writableModel(modelId: string, userId: string) {

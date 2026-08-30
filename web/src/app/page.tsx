@@ -7,6 +7,7 @@ import { UploadForm } from '@/components/catalogue/UploadForm';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import { VerifyBanner } from '@/components/auth/VerifyBanner';
 import { db, schema } from '@/db';
+import { deletableIds } from '@/lib/models';
 import { projectsFor } from '@/lib/projects';
 import {
   currentUser,
@@ -85,9 +86,11 @@ export default async function Home() {
   let models: ModelWithVersions[];
   let projects: Awaited<ReturnType<typeof projectsFor>>;
   let destinations: { id: string; name: string }[];
+  let deletable: string[];
   let verified = true;
   try {
     models = await loadModels(user.id);
+    deletable = [...(await deletableIds(models, user.id))];
     projects = await projectsFor(user.id);
     destinations = (await writableProjects(user.id)).map((project) => ({
       id: project.id,
@@ -133,6 +136,7 @@ export default async function Home() {
           <ModelList
             models={models}
             projects={projects.length > 1 ? projects : []}
+            deletable={deletable}
           />
         </div>
       </div>
