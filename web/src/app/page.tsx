@@ -107,14 +107,43 @@ export default async function Home() {
 
   return (
     <main className="min-h-dvh bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
-          <h1 className="text-base font-medium text-slate-900">EhsimCAD</h1>
-          <div className="flex items-center gap-4">
-            <Link href="/projects" className="text-xs text-slate-500 hover:underline">
+      {/* Stays put while a long catalogue scrolls: the way back and the way
+          out should not depend on where you are in the list. */}
+      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/85 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
+          <Link href="/" className="flex items-center gap-2.5">
+            {/* The same isometric box as the favicon, so the tab and the page
+                are recognisably one thing. */}
+            <svg viewBox="0 0 32 32" aria-hidden className="h-6 w-6">
+              <rect width="32" height="32" rx="7" fill="#2563eb" />
+              <g
+                fill="none"
+                stroke="#ffffff"
+                strokeWidth="2"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              >
+                <path d="M16 6 26 11.5 26 20.5 16 26 6 20.5 6 11.5 Z" />
+                <path d="M6 11.5 16 17 26 11.5" />
+                <path d="M16 17 16 26" />
+              </g>
+            </svg>
+            <span className="text-sm font-semibold tracking-tight text-slate-900">
+              EhsimCAD
+            </span>
+          </Link>
+
+          <div className="flex items-center gap-5">
+            <Link
+              href="/projects"
+              className="text-xs text-slate-500 transition-colors hover:text-slate-900"
+            >
               projects
             </Link>
-            <Link href="/sample" className="text-xs text-slate-500 hover:underline">
+            <Link
+              href="/sample"
+              className="text-xs text-slate-500 transition-colors hover:text-slate-900"
+            >
               sample
             </Link>
             <SignOutButton email={user.email} />
@@ -122,23 +151,34 @@ export default async function Home() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-3xl px-6 py-6">
+      <div className="mx-auto max-w-5xl px-6 py-8">
         {!verified && (
-          <div className="pb-4">
+          <div className="pb-6">
             <VerifyBanner email={user.email} />
           </div>
         )}
 
-        <UploadForm destinations={destinations} />
-        <div className="pt-4">
-          {/* Which project a model is in only means something once there is
-              more than one to tell apart. */}
-          <ModelList
-            models={models}
-            projects={projects.length > 1 ? projects : []}
-            deletable={deletable}
-          />
+        <div className="flex flex-col gap-3 pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-slate-900">Models</h2>
+            <p className="pt-1 text-xs text-slate-500">
+              {models.length === 0
+                ? 'Nothing uploaded yet'
+                : `${models.length} model${models.length === 1 ? '' : 's'}`}
+              <span className="text-slate-400"> · STEP, IGES, STL, OBJ, PLY, glTF</span>
+            </p>
+          </div>
+
+          <UploadForm destinations={destinations} />
         </div>
+
+        {/* Which project a model is in only means something once there is
+            more than one to tell apart. */}
+        <ModelList
+          models={models}
+          projects={projects.length > 1 ? projects : []}
+          deletable={deletable}
+        />
       </div>
     </main>
   );

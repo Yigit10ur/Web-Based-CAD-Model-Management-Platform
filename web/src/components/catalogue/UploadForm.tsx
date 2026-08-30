@@ -42,13 +42,13 @@ export function UploadForm({ destinations }: { destinations: Destination[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col items-end gap-2">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           disabled={busy}
           onClick={() => input.current?.click()}
-          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-slate-300"
+          className="rounded-md bg-blue-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:bg-slate-300 disabled:shadow-none"
         >
           {stageLabel(stage, 'Upload model')}
         </button>
@@ -59,7 +59,7 @@ export function UploadForm({ destinations }: { destinations: Destination[] }) {
             value={projectId}
             onChange={(event) => setProjectId(event.target.value)}
             disabled={busy}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-700"
+            className="rounded-md border border-slate-300 bg-white px-2 py-2 text-sm text-slate-700"
             aria-label="Project to upload into"
           >
             {destinations.map((destination) => (
@@ -69,8 +69,6 @@ export function UploadForm({ destinations }: { destinations: Destination[] }) {
             ))}
           </select>
         )}
-
-        <span className="text-xs text-slate-500">STEP, IGES, STL, OBJ, PLY, glTF</span>
       </div>
 
       <input
