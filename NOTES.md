@@ -11,7 +11,7 @@ Started 2026-08-24. This snapshot: 2026-08-28, `main` at 42 commits.
 
 ## Where it is
 
-Live at <https://web-based-cad-model-management-plat.vercel.app>. Web on Vercel
+Live at <https://ehsimcad.vercel.app>. Web on Vercel
 (`fra1`), Postgres and object storage on Supabase (Frankfurt), conversion on
 GitHub Actions. Nothing runs between uploads, so nothing is billed.
 
@@ -176,8 +176,15 @@ becomes available.
 commercial SDK. The honest framing: every one of those systems exports STEP,
 which is the industry exchange format and is fully supported.
 
-**The URL and repository name still say `web-based-cad-model-management-plat`.**
-Only the application is named EhsimCAD.
+**Renaming reaches further than the two names.** The repository is `ehsimcad`
+and the site is <https://ehsimcad.vercel.app>; the old domain 308s to it, which
+keeps every link already handed out alive. Three things had to move with the
+names and none of them are in this repository: `GITHUB_REPOSITORY` in Vercel,
+which the dispatch that starts a conversion is built from -- a renamed
+repository answers with a redirect, and a redirected POST does not stay a POST;
+`SITE_URL`, if it is set, which is what links in email point at; and the GitHub
+OAuth application's callback URL, which is tied to the domain, so signing in
+with GitHub breaks the moment the domain moves without it.
 
 ---
 
