@@ -176,8 +176,12 @@ becomes available.
 commercial SDK. The honest framing: every one of those systems exports STEP,
 which is the industry exchange format and is fully supported.
 
-**The URL and repository name still say `web-based-cad-model-management-plat`.**
-Only the application is named EhsimCAD.
+**The deployed URL still says `web-based-cad-model-management-plat`.** The
+repository is `ehsimcad`; the Vercel project has not been renamed yet, and two
+environment variables have to move with it when it is: `GITHUB_REPOSITORY`,
+which the dispatch that starts a conversion is built from, and `SITE_URL` if it
+is set, which is what links in email point at. The GitHub OAuth application's
+callback URL is tied to the domain too.
 
 ---
 

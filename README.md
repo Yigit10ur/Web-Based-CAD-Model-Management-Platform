@@ -1,6 +1,8 @@
-# Web Based CAD Model Management Platform
+# EhsimCAD
 
-[![CI](https://github.com/Yigit10ur/Web-Based-CAD-Model-Management-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Yigit10ur/Web-Based-CAD-Model-Management-Platform/actions/workflows/ci.yml)
+A web-based CAD model management platform.
+
+[![CI](https://github.com/Yigit10ur/ehsimcad/actions/workflows/ci.yml/badge.svg)](https://github.com/Yigit10ur/ehsimcad/actions/workflows/ci.yml)
 
 **English** · [Türkçe](#türkçe)
 
@@ -122,7 +124,7 @@ project for production: [DEPLOY.md](DEPLOY.md)
 
 ## Türkçe
 
-[English](#web-based-cad-model-management-platform) · **Türkçe**
+[English](#ehsimcad) · **Türkçe**
 
 **[Canlı](https://web-based-cad-model-management-plat.vercel.app)** · hesapsız, yalnızca viewer:
 **[/sample](https://web-based-cad-model-management-plat.vercel.app/sample)**
