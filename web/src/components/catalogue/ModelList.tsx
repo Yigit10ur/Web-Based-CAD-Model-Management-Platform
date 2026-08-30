@@ -8,12 +8,21 @@ import type { Model, ModelVersion } from '@/db/schema';
 
 export type ModelWithVersions = Model & { versions: ModelVersion[] };
 
-const STATUS_STYLE: Record<ModelVersion['status'], string> = {
-  uploading: 'bg-slate-100 text-slate-600',
-  queued: 'bg-amber-100 text-amber-800',
-  processing: 'bg-blue-100 text-blue-800',
-  ready: 'bg-emerald-100 text-emerald-800',
-  failed: 'bg-red-100 text-red-800',
+/**
+ * A dot and a word rather than a coloured pill.
+ *
+ * Five loud badges down the right of a list is the loudest thing on the page,
+ * and in a catalogue where almost everything is `ready` the badges are the
+ * least interesting column in it. The dot carries the colour; the word carries
+ * the meaning.
+ */
+const STATUS: Record<ModelVersion['status'], { dot: string; text: string; label: string }> = {
+  uploading: { dot: 'bg-slate-300', text: 'text-slate-500', label: 'uploading' },
+  queued: { dot: 'bg-amber-400', text: 'text-slate-500', label: 'queued' },
+  // What is happening, rather than the word the database happens to use.
+  processing: { dot: 'bg-blue-500 animate-pulse', text: 'text-slate-500', label: 'converting' },
+  ready: { dot: 'bg-emerald-500', text: 'text-slate-500', label: 'ready' },
+  failed: { dot: 'bg-red-500', text: 'text-red-700', label: 'failed' },
 };
 
 /** Kilobytes below a megabyte: a 39 KB fixture reading "0.0 MB" is useless. */
@@ -22,13 +31,28 @@ function formatSize(bytes: number): string {
   return megabytes < 1 ? `${Math.round(bytes / 1024)} KB` : `${megabytes.toFixed(1)} MB`;
 }
 
+/**
+ * Fixed format and fixed zone on purpose: this renders on the server and again
+ * in the browser, and a date that formats differently in the two places is a
+ * hydration mismatch.
+ */
+const DATE = new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
 function Status({ version }: { version: ModelVersion }) {
+  const style = STATUS[version.status];
+
   return (
     <span
-      className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${STATUS_STYLE[version.status]}`}
+      className={`flex items-center gap-1.5 text-xs ${style.text}`}
       title={version.errorMessage ?? undefined}
     >
-      {version.status}
+      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${style.dot}`} />
+      {style.label}
     </span>
   );
 }
@@ -59,6 +83,18 @@ export function ModelList({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Conversion happens in another process, so the page has no way of being
+  // told when it finishes. Poll only while something is actually in flight.
+  const pending = models.some((model) =>
+    model.versions.some((version) => version.status === 'queued' || version.status === 'processing'),
+  );
+
+  useEffect(() => {
+    if (!pending) return;
+    const timer = setInterval(() => router.refresh(), 3000);
+    return () => clearInterval(timer);
+  }, [pending, router]);
+
   async function remove(id: string) {
     setBusy(id);
     setError(null);
@@ -76,79 +112,78 @@ export function ModelList({
     }
   }
 
-  // Conversion happens in another process, so the page has no way of being
-  // told when it finishes. Poll only while something is actually in flight.
-  const pending = models.some((model) =>
-    model.versions.some((version) => version.status === 'queued' || version.status === 'processing'),
-  );
-
-  useEffect(() => {
-    if (!pending) return;
-    const timer = setInterval(() => router.refresh(), 3000);
-    return () => clearInterval(timer);
-  }, [pending, router]);
-
   if (models.length === 0) {
     return (
-      <p className="py-12 text-center text-sm text-slate-400">
-        No models yet. Upload a STEP file, or open the{' '}
-        <Link href="/sample" className="text-blue-600 hover:underline">
-          bundled sample
-        </Link>
-        .
-      </p>
+      <div className="rounded-lg border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
+        <p className="text-sm text-slate-600">No models yet.</p>
+        <p className="pt-1 text-xs text-slate-500">
+          Upload a STEP file, or open the{' '}
+          <Link href="/sample" className="text-blue-600 hover:underline">
+            bundled sample
+          </Link>
+          .
+        </p>
+      </div>
     );
   }
 
   return (
-    <ul className="divide-y divide-slate-200">
-      {models.map((model) => {
-        const latest = model.versions[0];
-        const openable = latest?.status === 'ready';
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      <ul className="divide-y divide-slate-100">
+        {models.map((model) => {
+          const latest = model.versions[0];
+          const openable = latest?.status === 'ready';
 
-        return (
-          <li key={model.id} className="flex items-center gap-3 py-3">
-            <div className="min-w-0 flex-1">
-              {openable ? (
-                <Link
-                  href={`/models/${model.id}`}
-                  className="text-sm font-medium text-slate-900 hover:text-blue-700 hover:underline"
-                >
-                  {model.name}
-                </Link>
-              ) : (
-                <span className="text-sm font-medium text-slate-500">{model.name}</span>
-              )}
-
-              <p className="truncate text-xs text-slate-400">
-                {projectName.has(model.projectId) && (
-                  <span className="text-slate-500">
-                    {projectName.get(model.projectId)} ·{' '}
+          return (
+            <li
+              key={model.id}
+              className="group flex items-center gap-4 px-4 py-3 transition-colors hover:bg-slate-50"
+            >
+              <div className="min-w-0 flex-1">
+                {openable ? (
+                  <Link
+                    href={`/models/${model.id}`}
+                    className="block truncate text-sm font-medium text-slate-900 hover:text-blue-700"
+                  >
+                    {model.name}
+                  </Link>
+                ) : (
+                  <span className="block truncate text-sm font-medium text-slate-500">
+                    {model.name}
                   </span>
                 )}
-                {model.versions.length} version{model.versions.length === 1 ? '' : 's'}
-                {latest && ` · ${latest.sourceFormat.toUpperCase()}`}
-                {latest && ` · ${formatSize(latest.sourceSizeBytes)}`}
-                {latest?.errorMessage && ` · ${latest.errorMessage}`}
-              </p>
-            </div>
 
-            {latest && <Status version={latest} />}
+                <p className="truncate pt-0.5 text-xs text-slate-500">
+                  {projectName.has(model.projectId) && (
+                    <span className="text-slate-600">{projectName.get(model.projectId)} · </span>
+                  )}
+                  <span className="tabular">{DATE.format(model.createdAt)}</span>
+                  {model.versions.length > 1 && (
+                    <span className="tabular"> · {model.versions.length} versions</span>
+                  )}
+                  {latest?.errorMessage && (
+                    <span className="text-red-700"> · {latest.errorMessage}</span>
+                  )}
+                </p>
+              </div>
 
-            {canDelete.has(model.id) &&
-              (confirming === model.id ? (
-                <span className="flex shrink-0 items-center gap-2">
+              {/* Confirming takes the row over. The technical columns are
+                  not what anyone is reading at that moment, and reserving
+                  space for the question next to them leaves a dead strip down
+                  the right of every other row. */}
+              {confirming === model.id ? (
+                <div className="flex shrink-0 items-center gap-2.5">
                   {/* The count is the part worth reading twice: deleting a
                       model takes its revisions with it. */}
-                  <span className="text-xs text-slate-500">
-                    delete all {model.versions.length} version
+                  <span className="text-xs text-slate-600">
+                    Delete {model.versions.length} version
                     {model.versions.length === 1 ? '' : 's'}?
                   </span>
                   <button
                     type="button"
                     disabled={busy === model.id}
                     onClick={() => remove(model.id)}
-                    className="rounded bg-red-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-red-700 disabled:bg-slate-300"
+                    className="rounded bg-red-600 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:bg-slate-300"
                   >
                     {busy === model.id ? 'deleting…' : 'delete'}
                   </button>
@@ -156,28 +191,61 @@ export function ModelList({
                     type="button"
                     disabled={busy === model.id}
                     onClick={() => setConfirming(null)}
-                    className="text-xs text-slate-500 hover:underline"
+                    className="rounded px-1.5 py-1 text-xs text-slate-500 transition-colors hover:text-slate-900"
                   >
                     cancel
                   </button>
-                </span>
+                </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setError(null);
-                    setConfirming(model.id);
-                  }}
-                  className="shrink-0 text-xs text-slate-400 hover:text-red-700 hover:underline"
-                >
-                  delete
-                </button>
-              ))}
-          </li>
-        );
-      })}
+                <>
+                  {/* The technical columns, aligned so they read down rather
+                      than across: same width per digit, same right edge. */}
+                  {latest && (
+                    <div className="hidden shrink-0 items-center gap-4 sm:flex">
+                      <span className="w-10 font-mono text-[11px] uppercase text-slate-400">
+                        {latest.sourceFormat}
+                      </span>
+                      <span className="tabular w-16 text-right font-mono text-[11px] text-slate-500">
+                        {formatSize(latest.sourceSizeBytes)}
+                      </span>
+                    </div>
+                  )}
 
-      {error && <li className="py-2 text-xs text-red-700">{error}</li>}
-    </ul>
+                  {latest && (
+                    <div className="shrink-0 sm:w-24">
+                      <Status version={latest} />
+                    </div>
+                  )}
+
+                  <div className="flex shrink-0 justify-end sm:w-14">
+                    {canDelete.has(model.id) && (
+                      // Out of the way until the row is under the pointer, but
+                      // never hidden from the keyboard: focus brings it back.
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setError(null);
+                          setConfirming(model.id);
+                        }}
+                        className="rounded px-2 py-1 text-xs text-slate-400 transition hover:bg-red-50 hover:text-red-700 focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                      >
+                        delete
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+
+            </li>
+          );
+        })}
+      </ul>
+
+      {error && (
+        <p className="border-t border-slate-100 bg-red-50 px-4 py-2 text-xs text-red-700">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

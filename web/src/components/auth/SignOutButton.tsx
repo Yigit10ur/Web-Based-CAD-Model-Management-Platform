@@ -9,8 +9,15 @@ export function SignOutButton({ email }: { email: string | null }) {
       }}
       className="flex items-center gap-2"
     >
-      {email && <span className="text-xs text-slate-500">{email}</span>}
-      <button type="submit" className="text-xs text-slate-500 hover:underline">
+      {email && (
+        <span className="hidden max-w-[16rem] truncate text-xs text-slate-400 sm:inline">
+          {email}
+        </span>
+      )}
+      <button
+        type="submit"
+        className="text-xs text-slate-500 transition-colors hover:text-slate-900"
+      >
         sign out
       </button>
     </form>
