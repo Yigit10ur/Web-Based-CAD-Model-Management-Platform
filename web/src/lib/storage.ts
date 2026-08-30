@@ -11,7 +11,12 @@
  * long before it hit anything else.
  */
 
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 import { env } from './env';
@@ -72,5 +77,29 @@ export async function presignDownload(key: string) {
     s3(),
     new GetObjectCommand({ Bucket: config.STORAGE_BUCKET, Key: key }),
     { expiresIn: config.STORAGE_URL_TTL_SECONDS },
+  );
+}
+
+/**
+ * Remove objects from storage.
+ *
+ * Deleting a key that is not there succeeds, which is what makes a failed
+ * deletion safe to retry: the second attempt finishes the half that worked the
+ * first time instead of failing on it.
+ *
+ * One request per key rather than the batch `DeleteObjects` call. Every S3
+ * implementation answers the single-object form, the batch one reports partial
+ * failure in the body rather than the status, and a model has a handful of
+ * files, not thousands.
+ */
+export async function deleteObjects(keys: string[]): Promise<void> {
+  const wanted = keys.filter(Boolean);
+  if (wanted.length === 0) return;
+
+  const config = env();
+  await Promise.all(
+    wanted.map((Key) =>
+      s3().send(new DeleteObjectCommand({ Bucket: config.STORAGE_BUCKET, Key })),
+    ),
   );
 }
