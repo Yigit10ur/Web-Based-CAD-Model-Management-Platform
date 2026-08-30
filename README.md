@@ -6,8 +6,8 @@ A web-based CAD model management platform.
 
 **English** · [Türkçe](#türkçe)
 
-**[Live](https://web-based-cad-model-management-plat.vercel.app)** · the viewer alone, with no account:
-**[/sample](https://web-based-cad-model-management-plat.vercel.app/sample)**
+**[Live](https://ehsimcad.vercel.app)** · the viewer alone, with no account:
+**[/sample](https://ehsimcad.vercel.app/sample)**
 
 Upload a CAD assembly and inspect it in the browser: walk the part tree, read
 exact mass properties, measure between corners, and cut a section through it.
@@ -126,8 +126,8 @@ project for production: [DEPLOY.md](DEPLOY.md)
 
 [English](#ehsimcad) · **Türkçe**
 
-**[Canlı](https://web-based-cad-model-management-plat.vercel.app)** · hesapsız, yalnızca viewer:
-**[/sample](https://web-based-cad-model-management-plat.vercel.app/sample)**
+**[Canlı](https://ehsimcad.vercel.app)** · hesapsız, yalnızca viewer:
+**[/sample](https://ehsimcad.vercel.app/sample)**
 
 Bir CAD montajını yükleyip tarayıcıda inceleyin: parça ağacında gezin, exact
 kütle özelliklerini okuyun, köşeler arası ölçüm yapın, içinden kesit alın.
