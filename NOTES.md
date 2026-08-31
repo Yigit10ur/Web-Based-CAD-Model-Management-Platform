@@ -129,6 +129,11 @@ normal at every point.
 | Tree rows | 8 | 502 |
 | glb / metadata | 1.60 / 2.00 MB | 1.74 / 1.88 MB |
 
+Peak memory in the worker: 435 MB for the 500-part assembly, 344 MB for a
+three-part one. Almost all of it is OpenCascade being loaded, so the fixed cost
+dominates the model -- which is why 2 GB is enough for a machine running both
+processes.
+
 Frame rate on an M1 Pro: 120 fps, which is the display's ceiling rather than
 the application's, with 20 MB of GPU memory. The 500-part model was reported
 smooth; no figure was taken.

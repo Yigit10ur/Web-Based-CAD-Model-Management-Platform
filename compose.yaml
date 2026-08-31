@@ -1,0 +1,52 @@
+# The application on a server of your own.
+#
+# Two long-running processes and nothing else: the web application, and a
+# worker that converts uploads. Postgres and object storage are yours to
+# provide -- put their details in `.env.deploy` next to this file.
+#
+#   cp .env.deploy.example .env.deploy   and fill it in
+#   docker compose run --rm migrate      once, and after any upgrade
+#   docker compose up -d
+#
+# Check it before trusting it:
+#   docker compose run --rm preflight
+
+services:
+  web:
+    build:
+      context: ./web
+    env_file: .env.deploy
+    ports:
+      # Change the left-hand number to move it; put a reverse proxy in front
+      # for TLS, which this does not terminate.
+      - "3000:3000"
+    restart: unless-stopped
+
+  # The converter. No ports: it reaches out to the database and to storage and
+  # nothing reaches in.
+  #
+  # Safe to run more than one -- `FOR UPDATE SKIP LOCKED` means two workers
+  # take different jobs rather than the same one. One is enough until uploads
+  # start queueing behind each other.
+  worker:
+    build:
+      context: ./converter
+    env_file: .env.deploy
+    restart: unless-stopped
+
+  # Bring the schema up. Runs to completion and exits, so it is `run`, not
+  # `up`: `docker compose run --rm migrate`.
+  migrate:
+    build:
+      context: ./web
+    env_file: .env.deploy
+    command: ["npx", "drizzle-kit", "migrate"]
+    profiles: ["tools"]
+
+  # Reports what is missing or unreachable before anything tries to serve.
+  preflight:
+    build:
+      context: ./web
+    env_file: .env.deploy
+    command: ["node", "scripts/preflight.mjs"]
+    profiles: ["tools"]

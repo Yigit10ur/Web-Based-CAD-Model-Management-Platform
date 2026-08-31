@@ -21,6 +21,7 @@ __pycache__/
 # copy, so they belong in the repository.
 !.env.example
 !.env.fly.example
+!.env.deploy.example
 
 # Editors / OS
 .DS_Store

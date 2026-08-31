@@ -1,0 +1,264 @@
+# Installing EhsimCAD on your own server
+
+For the team doing the install. It assumes no knowledge of the application and
+no access to whoever wrote it.
+
+Everything is configuration: the same build runs in every environment, and no
+secret is baked into it.
+
+---
+
+## What it is
+
+Two long-running processes.
+
+| | What it does | Reached by |
+|---|---|---|
+| **web** | Serves the site and the API. Node, listens on 3000. | People, through your reverse proxy |
+| **worker** | Converts uploaded CAD files. Python + OpenCascade. | Nothing — it connects out |
+
+They share a Postgres database and one object-storage bucket, and never speak
+to each other directly. An upload becomes a row in a queue table; the worker
+picks it up. Stopping the worker does not stop the site — uploads simply wait.
+
+---
+
+## What you need to provide
+
+**Postgres 14 or newer.** One database and a user that owns it. The
+application creates its own tables.
+
+**S3-compatible object storage.** One bucket and one key pair that can read,
+write and delete in it. MinIO, Ceph, StorageGRID and AWS S3 all work. A model
+costs the uploaded file plus about 4–6 MB derived from it, kept per revision,
+and nothing is removed unless somebody deletes a model.
+
+**A host with 2 GB of RAM**, which is comfortable for both processes together.
+Measured: the worker peaked at 435 MB converting a 500-part assembly and
+344 MB converting a three-part one. Almost all of that is OpenCascade itself
+being loaded — the part that grows with the model is smaller than the fixed
+cost, so a bigger assembly does not need a bigger machine nearly as fast as you
+would expect. Conversion is single-threaded and takes seconds; the same
+500-part assembly took 5.5 s.
+
+**A reverse proxy** for TLS. It does not terminate TLS itself. It does not
+need a large body limit either — see the next section for why.
+
+---
+
+## Read this before you configure anything
+
+**Browsers upload directly to object storage, not through the application.**
+The web application signs a URL and hands it to the browser, which then PUTs
+the file straight to the bucket. A 200 MB assembly never passes through Node.
+
+Two consequences, and they are the two things installs get wrong:
+
+1. **`STORAGE_ENDPOINT` must be reachable from your users' browsers**, not only
+   from the server. An address that resolves inside the data centre and nowhere
+   else will pass every check on the server and fail every upload on every
+   desktop.
+
+2. **The bucket must allow cross-origin requests from `SITE_URL`.** The browser
+   sends a preflight `OPTIONS` before the `PUT`. Allow the origin, the methods
+   `GET`, `PUT` and `HEAD`, and the `content-type` header. On MinIO this is the
+   bucket's CORS configuration; some builds allow everything by default, which
+   is why this only bites on the ones that do not.
+
+The upside of the same design: your proxy never carries a 200 MB body, so
+`client_max_body_size` and upload timeouts do not need raising.
+
+---
+
+## Install
+
+### Configure
+
+```
+cp .env.deploy.example .env.deploy
+```
+
+Fill it in. Every value is explained in the file. The four that have no
+sensible default are `DATABASE_URL`, the storage credentials, `AUTH_SECRET`
+(`openssl rand -base64 32`) and `SITE_URL`.
+
+### Check the configuration before anything runs
+
+```
+docker compose run --rm preflight
+```
+
+Without Docker:
+
+```
+cd web && npm ci && node --env-file=../.env.deploy scripts/preflight.mjs
+```
+
+It connects to the database, checks the schema is up to date, and writes,
+reads back and deletes a test object in the bucket. It names what is wrong and
+exits non-zero. **Do not skip this**: every check in it stands for a failure
+that is otherwise silent or reported as something else.
+
+Warnings are not failures. They list what is switched off — email delivery,
+GitHub sign-in — so nothing is a surprise later.
+
+### Create the schema
+
+```
+docker compose run --rm migrate
+```
+
+Without Docker: `cd web && npx drizzle-kit migrate`
+
+Run it once, and again after every upgrade. It is deliberately not automatic:
+a schema change that runs by itself is a schema change nobody read.
+
+### Start
+
+```
+docker compose up -d
+```
+
+Without Docker, see **Running it without containers** below.
+
+---
+
+## Check that it works
+
+```
+curl -fsS http://localhost:3000/api/health
+```
+
+`{"status":"ok","database":true}`. It answers 503 when the database is
+unreachable, which is the condition worth taking an instance out of rotation
+for. It needs no authentication.
+
+Then, in a browser, end to end:
+
+1. Open `SITE_URL`, create an account, sign in.
+2. Upload a STEP file. It should show `queued`, then `converting`, then
+   `ready` — under a minute for a typical assembly.
+3. Open it. The part tree, the properties panel and the section control should
+   all work.
+
+If it stays `queued`, the worker is not running or cannot see the queue:
+
+```
+docker compose logs worker        # or: journalctl -u ehsimcad-worker -f
+```
+
+---
+
+## When something is wrong
+
+| What you see | What it is |
+|---|---|
+| Upload fails in the browser, server looks fine | The browser cannot reach `STORAGE_ENDPOINT`, or the bucket rejects the cross-origin request. Look at the browser's network tab: a failed `OPTIONS` is CORS, a failed connection is the address. |
+| Model stays `queued` for ever | No worker running, or it cannot reach the database. The queue is a table — nothing is lost, it converts as soon as a worker starts. |
+| Worker will not start | It refuses to run when OpenCascade is not importable, rather than accepting jobs and failing all of them. The log says so on the first line. |
+| Model goes `failed` | The file itself. `error_message` on the version row, and the worker log, say why. Other uploads are unaffected. |
+| Sign-in loops back to the sign-in page | `AUTH_SECRET` is unset or differs between instances behind a load balancer. |
+| "Continue with GitHub" errors | The OAuth application's callback must be exactly `SITE_URL` + `/api/auth/callback/github`. Leave `AUTH_GITHUB_*` empty to switch it off entirely. |
+| Password reset email never arrives | Expected with no `MAIL_API_KEY`: the message is written to the web log instead. |
+| Everyone signed out after a restart | `AUTH_SECRET` is being regenerated instead of kept. |
+
+---
+
+## Running it without containers
+
+**Web.** Node 22.
+
+```
+cd web
+npm ci
+npm run build
+cp -r public .next/standalone/
+cp -r .next/static .next/standalone/.next/
+```
+
+`npm run build` produces a self-contained server at `.next/standalone/server.js`,
+but does not copy the static files into it — they are served, not imported, so
+Next.js leaves them where they are. The two `cp` lines above are what a
+container image does; miss them and the site loads with no styling and no
+icons.
+
+**Worker.** Python 3.12.
+
+```
+cd converter
+python3.12 -m venv .venv
+.venv/bin/pip install ".[cad]"
+```
+
+OpenCascade arrives as a wheel and needs a few system libraries beside it:
+`libgl1`, `libglu1-mesa`, `libxrender1`, `libxext6`. It is about 220 MB
+installed.
+
+**Both as services.** `deploy/systemd/` holds a unit for each. Adjust the
+paths and the user, then:
+
+```
+sudo cp deploy/systemd/*.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now ehsimcad-web ehsimcad-worker
+```
+
+---
+
+## Operating it
+
+**Logs.** `docker compose logs -f web worker`, or `journalctl -u ehsimcad-web
+-f`. Both processes log to stdout.
+
+**Restarting.** Safe at any time. The worker finishes the job it is on before
+exiting, and a job interrupted anyway is picked up again after
+`STALE_JOB_SECONDS` — a crashed worker does not lose an upload.
+
+**More conversion capacity.** Run more workers. Two of them take different
+jobs rather than the same one; the queue guarantees it. There is nothing to
+configure.
+
+**Backups.** The database and the bucket, together. Either one alone restores
+to a catalogue whose files are missing, or files nothing points at.
+
+**Upgrading.** Pull, rebuild, run the migration, restart. In that order —
+starting new code against an old schema is the one ordering that breaks.
+
+---
+
+## Known limits
+
+**Email needs an HTTPS provider, not SMTP.** The mail path posts to a provider
+over HTTPS. An internal SMTP relay is not supported yet. Until it is, leave
+`MAIL_API_KEY` empty: everything works except password reset and address
+confirmation, and the messages go to the log where they can be read.
+
+**GitHub sign-in needs the internet**, both from the server and from the
+browser. On a closed network, leave it off and use email and password.
+
+**The whole model is downloaded before it is drawn.** Fine for the assemblies
+tested — 1.7 MB of geometry and 2 MB of metadata for eleven parts — and not a
+design for 50 MB models.
+
+**Deleting a model while it is converting** can leave two files in the bucket
+that nothing points at. Seconds-wide, and it costs storage, not correctness.
+
+---
+
+## What has not been tested
+
+Honest, because the failures are yours to hit:
+
+- **The container images have never been built.** The Dockerfiles are written
+  from the install steps that were run by hand, and the standalone server they
+  start was run exactly as the image starts it — but no `docker build` has been
+  executed against them, on any machine.
+- **The systemd units have never been loaded**, for the same reason: neither
+  Docker nor systemd exists on the machine this was developed on.
+- **Only Supabase-hosted Postgres and storage have been used.** Both are spoken
+  to over standard protocols, and the S3 client is already configured for
+  path-style addressing, which is what MinIO needs — but MinIO itself has not
+  been tried.
+
+The preflight check is the thing to trust: it exercises the real database and
+the real bucket, whatever they turn out to be.
