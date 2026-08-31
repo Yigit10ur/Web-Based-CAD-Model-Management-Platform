@@ -294,18 +294,31 @@ that nothing points at. Seconds-wide, and it costs storage, not correctness.
 
 ## What has not been tested
 
-Honest, because the failures are yours to hit:
+Honest, because the failures are yours to hit. Neither Docker nor systemd
+exists on the machine this was developed on, so what could be verified was
+verified by running the images' own commands outside a container.
 
-- **The container images have never been built.** The Dockerfiles are written
-  from the install steps that were run by hand, and the standalone server they
-  start was run exactly as the image starts it — but no `docker build` has been
-  executed against them, on any machine.
-- **The systemd units have never been loaded**, for the same reason: neither
-  Docker nor systemd exists on the machine this was developed on.
-- **Only Supabase-hosted Postgres and storage have been used.** Both are spoken
-  to over standard protocols, and the S3 client is already configured for
-  path-style addressing, which is what MinIO needs — but MinIO itself has not
-  been tried.
+**Never run: `docker build`, `docker compose up`, `systemctl start`.** The
+layer mechanics, the base images and the `apt-get` line in the converter image
+are untested. If a build fails, that is where to look first.
+
+**Every command inside the images has been run**, on this machine, against the
+real database and the real bucket:
+
+| Step | Result |
+|---|---|
+| `npm ci` from an empty `node_modules` | installs |
+| `BUILD_STANDALONE=1 npm run build` | produces `.next/standalone` |
+| `node server.js`, started the way the image starts it | serves `/api/health`, `/sign-in`, `/sample` and its static assets |
+| a fresh virtualenv, then `pip install ".[cad]"` | installs, OpenCascade 7.9.3 included |
+| `python -m app.worker` | loads OpenCascade and reaches the database |
+| `uvicorn app.main:app` | `/health` and `/ready` both answer, `occt: true` |
+| every path the Dockerfiles `COPY` | present |
+
+**Only Supabase-hosted Postgres and storage have been used.** Both are spoken
+to over standard protocols, and the S3 client is already configured for
+path-style addressing, which is what MinIO needs — but MinIO itself has not
+been tried.
 
 The preflight check is the thing to trust: it exercises the real database and
 the real bucket, whatever they turn out to be.
@@ -402,8 +415,20 @@ desteklenmiyor. `MAIL_API_KEY` boş bırakılabilir — şifre sıfırlama ve ad
 doğrulama dışında her şey çalışır. GitHub ile giriş internet erişimi ister;
 kapalı ağda kapatın, e-posta ve şifreyle giriş çalışır.
 
-Bu belgede **denenmemiş olan** şeyler ayrı bir başlıkta yazılıdır:
-[What has not been tested](#what-has-not-been-tested). Konteyner imajları hiç
-derlenmedi, systemd birimleri hiç yüklenmedi, MinIO hiç denenmedi. Güvenilecek
-şey `preflight` çıktısıdır: sizin gerçek veritabanınızı ve gerçek kovanızı
-sınar.
+### Denenmemiş olanlar
+
+Bu makinede Docker da systemd de olmadığı için `docker build`, `docker compose
+up` ve `systemctl start` **hiç çalıştırılmadı**. Katman mekaniği, temel imajlar
+ve converter imajındaki `apt-get` satırı sınanmamıştır — derleme başarısız
+olursa önce oraya bakın.
+
+Buna karşılık **imajların içindeki her komut** bu makinede, gerçek veritabanına
+ve gerçek kovaya karşı çalıştırıldı: `npm ci`, `BUILD_STANDALONE=1 npm run
+build`, konteynerin başlattığı gibi `node server.js` (sağlık ucu, giriş sayfası,
+viewer ve statik varlıklar), sıfırdan bir sanal ortamda `pip install ".[cad]"`
+(OpenCascade 7.9.3 dahil), `python -m app.worker` ve `uvicorn app.main:app`.
+Ayrıntılı liste [What has not been tested](#what-has-not-been-tested)
+bölümünde.
+
+MinIO hiç denenmedi. Güvenilecek şey `preflight` çıktısıdır: sizin gerçek
+veritabanınızı ve gerçek kovanızı sınar.
