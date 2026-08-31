@@ -53,3 +53,9 @@ converter/out/
 #       ../web/public/samples/assembly.glb
 !converter/tests/fixtures/**
 !web/public/samples/**
+
+# setuptools leaves a copy of the package here when the converter is installed
+# from source (`pip install .`). It is a stale duplicate of `converter/app/`
+# the moment anything changes, and reading it instead of the real thing is an
+# easy hour to lose.
+converter/build/
