@@ -10,9 +10,10 @@ import {
   faceOfTriangle,
   modelCentre,
   modelDiagonal,
+  type BBox,
   type ModelMetadata,
 } from '@/lib/metadata';
-import { modelBounds, sectionPlane } from '@/lib/section';
+import { faceReference, modelBounds, sectionPlane } from '@/lib/section';
 import { snapTo } from '@/lib/snap';
 import { useViewerStore } from '@/store/viewer-store';
 
@@ -80,6 +81,7 @@ function Part({
   tolerance,
   clip,
   capSize,
+  bounds,
   order,
 }: {
   part: PartGeometry;
@@ -89,6 +91,7 @@ function Part({
   tolerance: number;
   clip: THREE.Plane | null;
   capSize: number;
+  bounds: BBox;
   order: number;
 }) {
   const hidden = useViewerStore((state) => state.hidden.has(part.id));
@@ -97,6 +100,8 @@ function Part({
   const tool = useViewerStore((state) => state.tool);
   const setHover = useViewerStore((state) => state.setHover);
   const addMeasurementPoint = useViewerStore((state) => state.addMeasurementPoint);
+  const picking = useViewerStore((state) => state.section.picking);
+  const setSection = useViewerStore((state) => state.setSection);
 
   useEffect(() => {
     part.surface.computeBoundsTree?.();
@@ -143,9 +148,43 @@ function Part({
   const sectionedAway = (event: ThreeEvent<PointerEvent | MouseEvent>) =>
     clip !== null && clip.distanceToPoint(event.point.clone().sub(offset)) < 0;
 
+  /**
+   * Borrow the clicked face's direction for the section plane.
+   *
+   * The rule itself is in `lib/section.ts` -- which face can be borrowed from
+   * and where the cut lands -- so it can be tested without a scene, and so
+   * this stays what it should be: turning a click into a face, and an answer
+   * into state.
+   */
+  const handleSectionPick = (event: ThreeEvent<MouseEvent>) => {
+    const index = brepFace(event);
+    const face = index == null ? undefined : metadata.snap[part.id]?.faces[index];
+    const result = faceReference(face, event.point.clone().sub(offset), bounds);
+
+    if (!result.taken) {
+      setSection({ pickError: result.reason });
+      return;
+    }
+
+    setSection({
+      reference: 'custom',
+      normal: result.normal,
+      position: result.position,
+      rotateX: 0,
+      rotateY: 0,
+      picking: false,
+      pickError: null,
+    });
+  };
+
   const handleClick = (event: ThreeEvent<MouseEvent>) => {
     if (sectionedAway(event)) return;
     event.stopPropagation();
+
+    if (picking) {
+      handleSectionPick(event);
+      return;
+    }
 
     if (tool === 'measure') {
       const target = snapAt(event);
@@ -218,11 +257,8 @@ export function Model({ url, metadata }: { url: string; metadata: ModelMetadata 
   const diagonal = useMemo(() => modelDiagonal(metadata.parts), [metadata]);
 
   const clip = useMemo(
-    () =>
-      section.enabled
-        ? sectionPlane(section.axis, section.position, section.flipped, bounds)
-        : null,
-    [section.enabled, section.axis, section.position, section.flipped, bounds],
+    () => (section.enabled ? sectionPlane(section, bounds) : null),
+    [section, bounds],
   );
 
   return (
@@ -245,6 +281,7 @@ export function Model({ url, metadata }: { url: string; metadata: ModelMetadata 
             tolerance={tolerance}
             clip={clip}
             capSize={diagonal * 1.5}
+            bounds={bounds}
             order={index * 2 + 1}
           />
         );

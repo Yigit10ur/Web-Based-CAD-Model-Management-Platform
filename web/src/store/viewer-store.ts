@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { create } from 'zustand';
 
-import type { SectionAxis } from '@/lib/section';
+import type { SectionPlacement } from '@/lib/section';
 import type { SnapTarget } from '@/lib/snap';
 
 /**
@@ -24,13 +24,18 @@ export interface Measurement {
   toLabel: string;
 }
 
-export interface SectionState {
+export interface SectionState extends SectionPlacement {
   enabled: boolean;
-  axis: SectionAxis;
-  /** 0..1 across the model's bounding box on that axis, not a world value. */
-  position: number;
-  /** Which half of the model the plane keeps. */
-  flipped: boolean;
+  /**
+   * Waiting for a face to be clicked.
+   *
+   * A mode of the section panel rather than a tool of its own, which is where
+   * a CAD package puts it: you are picking a reference for this cut, not
+   * changing what the pointer does from now on.
+   */
+  picking: boolean;
+  /** Why the last pick was refused, cleared as soon as one is accepted. */
+  pickError: string | null;
 }
 
 interface ViewerState {
@@ -88,7 +93,17 @@ function initialState() {
     selectedFace: null,
     tool: 'select' as ViewerTool,
     explode: 0,
-    section: { enabled: false, axis: 'z' as SectionAxis, position: 0.5, flipped: false },
+    section: {
+      enabled: false,
+      picking: false,
+      pickError: null,
+      reference: 'z' as const,
+      normal: [0, 0, 1] as [number, number, number],
+      position: 0.5,
+      flipped: false,
+      rotateX: 0,
+      rotateY: 0,
+    },
     hover: null,
     pending: null,
     measurements: [],
@@ -137,7 +152,17 @@ export const useViewerStore = create<ViewerState>((set) => ({
   // it is, so an exploded measurement would draw a line whose length disagreed
   // with its own label.
   setTool: (tool) =>
-    set(tool === 'measure' ? { tool, pending: null, hover: null, explode: 0 } : { tool, pending: null, hover: null }),
+    set((state) => ({
+      tool,
+      pending: null,
+      hover: null,
+      ...(tool === 'measure' ? { explode: 0 } : {}),
+      // A half-made section reference must not survive into another tool,
+      // where the next click would be silently eaten by it.
+      section: state.section.picking
+        ? { ...state.section, picking: false, pickError: null }
+        : state.section,
+    })),
 
   setExplode: (explode) => set({ explode }),
 

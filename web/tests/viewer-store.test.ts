@@ -21,7 +21,14 @@ function workOnAModel() {
   store.select('n1_2', 5);
   store.setTool('measure');
   store.setExplode(0.4);
-  store.setSection({ enabled: true, axis: 'x' });
+  store.setSection({
+    enabled: true,
+    reference: 'custom',
+    normal: [0.6, 0.8, 0],
+    position: 0.2,
+    rotateX: 15,
+    picking: true,
+  });
   store.setHover(snapTarget(1, 1, 1));
   store.addMeasurementPoint(snapTarget(9, 9, 9));
 }
@@ -53,7 +60,20 @@ describe('viewer store', () => {
     expect(clean.explode).toBe(0);
     expect(clean.hover).toBeNull();
     expect(clean.pending).toBeNull();
-    expect(clean.section).toEqual({ enabled: false, axis: 'z', position: 0.5, flipped: false });
+    // A cut taken along a face of the last model points at a face this one
+    // does not have, and a panel still waiting for a click would eat the first
+    // one made on the new model.
+    expect(clean.section).toEqual({
+      enabled: false,
+      picking: false,
+      pickError: null,
+      reference: 'z',
+      normal: [0, 0, 1],
+      position: 0.5,
+      flipped: false,
+      rotateX: 0,
+      rotateY: 0,
+    });
   });
 
   it('leaves no half-finished measurement behind', () => {

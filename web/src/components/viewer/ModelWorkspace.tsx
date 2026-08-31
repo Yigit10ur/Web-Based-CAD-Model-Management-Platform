@@ -36,8 +36,14 @@ export function ModelWorkspace({ modelUrl, metadataUrl, versionId }: Props) {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
 
-      const { pending, cancelPending, tool, setTool } = useViewerStore.getState();
-      if (pending) {
+      const { pending, cancelPending, tool, setTool, section, setSection } =
+        useViewerStore.getState();
+
+      // Waiting for a face is the most modal thing on screen, so it is the
+      // first thing Escape should let go of.
+      if (section.picking) {
+        setSection({ picking: false, pickError: null });
+      } else if (pending) {
         cancelPending();
       } else if (tool !== 'select') {
         setTool('select');

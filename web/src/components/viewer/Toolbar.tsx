@@ -11,6 +11,7 @@ const TOOLS: { id: ViewerTool; label: string; hint: string }[] = [
 export function Toolbar({ source }: { source: GeometrySource }) {
   const tool = useViewerStore((state) => state.tool);
   const setTool = useViewerStore((state) => state.setTool);
+  const picking = useViewerStore((state) => state.section.picking);
   const active = TOOLS.find((entry) => entry.id === tool);
 
   return (
@@ -32,9 +33,15 @@ export function Toolbar({ source }: { source: GeometrySource }) {
         ))}
       </div>
 
-      <span className="rounded bg-white/80 px-2 py-1 text-[11px] text-slate-500">
-        {active?.hint}
-      </span>
+      {picking ? (
+        <span className="rounded bg-amber-500 px-2 py-1 text-[11px] font-medium text-white">
+          Click a flat face to cut along it · Esc cancels
+        </span>
+      ) : (
+        <span className="rounded bg-white/80 px-2 py-1 text-[11px] text-slate-500">
+          {active?.hint}
+        </span>
+      )}
 
       {/* A mesh has nothing exact to snap to, so measurements land wherever
           the cursor did. Saying so up front beats letting someone read a
