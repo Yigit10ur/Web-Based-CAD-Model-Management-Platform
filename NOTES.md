@@ -5,7 +5,7 @@ to be picked up cold: the decisions below are the ones that would otherwise
 have to be re-derived from the code, and the measurements are the ones nobody
 should have to take twice.
 
-Started 2026-08-24. This snapshot: 2026-08-28, `main` at 42 commits.
+Started 2026-08-24. This snapshot: 2026-08-31, `main` at 47 commits.
 
 ---
 
@@ -15,7 +15,7 @@ Live at <https://ehsimcad.vercel.app>. Web on Vercel
 (`fra1`), Postgres and object storage on Supabase (Frankfurt), conversion on
 GitHub Actions. Nothing runs between uploads, so nothing is billed.
 
-162 tests pass: 122 in `web` (vitest, against an in-process Postgres), 40 in
+194 tests pass: 154 in `web` (vitest, against an in-process Postgres), 40 in
 `converter` (pytest; the geometry ones skip where OCCT is not installed, which
 is CI).
 
@@ -92,6 +92,31 @@ means every GitHub account on the internet, not everyone in the company.
 **Migrations are run by hand, before the merge that needs them.** A schema
 change that runs automatically is a schema change nobody read.
 
+**Deleting sweeps storage first and the row second.** The row is the only
+record of which keys belonged to a model, so a storage error after it would
+leave files nothing points at -- invisible, unreachable, still paid for. This
+way a failure leaves everything as it was, and the retry converges, because
+deleting a key that is already gone succeeds. The cost is the opposite failure:
+files gone and a row that survived, which is visible and can be deleted again.
+
+**Who may delete is one pure function, called by both the route and the
+catalogue.** A button that appears for someone the route will refuse is not a
+permission check, it is a trap. Same shape as the section pick rule: the
+decision lives in `lib/`, the component turns a click into a call.
+
+**The section direction is a unit vector; X, Y and Z are the three that happen
+to be named.** One code path rather than two, and a test pins that the named
+axes produce the identical plane as the same direction handed in by hand. The
+slider stays 0..1 across the model, with the travel taken by projecting the
+bounding box onto the direction instead of reading one of its sides.
+
+**A direction borrowed from a face comes from the B-rep, never from the
+triangle that was hit.** Same rule as measurement, applied to one more thing: a
+tessellated face is a fan of triangles whose normals differ from the surface,
+and a cut a fifth of a degree off the face it was taken from is worse than no
+feature at all. Only planar faces can lend one -- a cylinder has a different
+normal at every point.
+
 ---
 
 ## Measured
@@ -141,16 +166,36 @@ itself, so an upload is ready in well under a minute.
   needs one, or the test passes everywhere and paints the whole screen.
 - **Presigned URLs are signed per request**, so the browser cache key changes on
   every open and the whole payload is downloaded again.
+- **Local and production are two different Supabase projects.** `web/.env.local`
+  is one; Vercel and the Actions secrets are another, the same one
+  `converter/.env.fly` holds. Nothing drains the local queue, so an upload made
+  against a dev server sits `queued` for ever with nothing wrong with the file,
+  the converter or the queue. Ask which environment is on screen before reading
+  the code. `converter/.venv/bin/python -m app.worker --drain` empties it.
+- **Gate a feature on the data, not on a label.** The `face` button was hidden
+  wherever `geometry_source !== 'brep'` -- including the bundled sample, whose
+  metadata predates that field and has a planar face on every part. The
+  precondition was never the label; it was whether there is a flat face to
+  borrow from.
+- **Renaming the repository breaks the conversion dispatch until Vercel is
+  told.** `GITHUB_REPOSITORY` is what the dispatch URL is built from, GitHub
+  answers a renamed repository with a redirect, and a redirected POST does not
+  stay a POST. It fails silently, by design: a failed dispatch is deliberately
+  not an upload failure.
 
 ---
 
 ## What is missing
 
-**Nothing can be deleted.** No `DELETE` route, no button. Upload the wrong file
-and it stays, visible to everyone the project is shared with. This is the
-largest functional hole and the one a real user meets first.
+**A revision cannot be deleted on its own.** A model goes whole, with every
+revision and every file. Deleting one revision was left out deliberately: it
+leaves "which one is current?" answered differently depending on which was
+removed. Deleting a model while its conversion is running is the one gap --
+storage is swept before the worker writes its output, so two files can be
+orphaned in the seconds a conversion takes.
 
-**No mail provider is configured.** The flows are built and tested, but with no
+**No mail provider is configured -- the largest hole now, and the one a real
+user meets first.** The flows are built and tested, but with no
 `MAIL_API_KEY` the messages are written to the log. Consequences: a forgotten
 password cannot be recovered, and a password account cannot open projects
 shared with it. GitHub accounts are unaffected. Sending to arbitrary addresses
@@ -163,8 +208,9 @@ catalogue has no pagination either, which is the real scaling limit.
 **Sessions survive a password reset.** JWT strategy; an old cookie stays valid
 until it expires.
 
-**The section plane is axis-aligned only.** No angle measurement either, though
-the data for it is already exported.
+**No angle measurement**, though the data for it is already exported. The
+section plane itself now takes any direction: three named axes, a direction
+borrowed from a flat face, and two dials to rotate away from either.
 
 **The whole glb loads before anything is drawn.** Fine at 1.7 MB, not at 50 MB.
 
@@ -212,19 +258,19 @@ with GitHub breaks the moment the domain moves without it.
 |---|---|
 | `lib/metadata.ts` | The contract, restated in TypeScript. |
 | `lib/snap.ts` | Vertex over edge over face, projected onto the true circle rather than the drawn polygon; ignores anything a section plane has cut away. |
-| `lib/section.ts` | The clipping plane, stored 0..1 across the bounding box so one control behaves the same at any scale. Its margin is symmetric, which is what makes 0.5 exactly the middle. |
+| `lib/section.ts` | The clipping plane. Any unit direction, stored 0..1 across the bounding box so one control behaves the same at any scale; its margin is symmetric, which is what makes 0.5 exactly the middle. Also the rule for which face can lend a direction, and `positionOfPoint` -- the exact inverse of `cutDistance`, which is what puts a borrowed cut *on* the face rather than near it. |
 | `lib/framing.ts` | Camera, clipping planes, grid spacing and annotation sizes, all derived from the model. |
 | `lib/bvh.ts` | three-mesh-bvh wiring for raycasting. |
 | `components/viewer/Viewer.tsx` | The canvas: Z-up camera, stencil buffer on, local clipping on, keyed by model so a new one gets a new context. |
 | `components/viewer/Model.tsx` | Draws the parts and their edges, handles selection and snapping. |
 | `components/viewer/AssemblyTree.tsx` | The tree, with visibility checkboxes and repeated siblings collapsed into one row with a count. |
 | `components/viewer/MeasureLayer.tsx` | Measurement lines, markers and labels. Labels are constant on screen; a dimension is an annotation, not part of the model. |
-| `components/viewer/SectionControls.tsx` | Axis, flip, centre, and the position slider with a millimetre readout. |
+| `components/viewer/SectionControls.tsx` | The reference row (X, Y, Z, and `face` to borrow one from the model), two rotation dials, flip, centre, and the position slider with a millimetre readout. Offers `face` only where there is a flat face to borrow from. |
 | `components/viewer/ClippedSolid.tsx` | The stencil-buffer cap that makes a cut read as solid material. |
 | `components/viewer/PropertiesPanel.tsx` | Exact mass properties for the selected part; the explode control. |
-| `components/viewer/Toolbar.tsx` | Select/measure, and the warning that a mesh has nothing exact to snap to. |
+| `components/viewer/Toolbar.tsx` | Select/measure, the warning that a mesh has nothing exact to snap to, and the hint while a section reference is being picked -- the pointer is doing something other than what the tool says, and the panel that started it is off to the side. |
 | `components/viewer/ModelWorkspace.tsx` | Loads the metadata, and clears the viewer store when the model changes. |
-| `store/viewer-store.ts` | Visibility, selection, tool, section, explode and measurements. Reset per model -- part ids restart at `n1_1` in every file. |
+| `store/viewer-store.ts` | Visibility, selection, tool, section, explode and measurements. Reset per model -- part ids restart at `n1_1` in every file, and a section borrowed from a face points at one the next model does not have. |
 
 ### Web — platform (`web/src/`)
 
@@ -240,12 +286,19 @@ with GitHub breaks the moment the domain moves without it.
 | `lib/email-tokens.ts` | One-time links: issued random, stored hashed, spent once. |
 | `lib/verification.ts` | Sending and accepting the address confirmation. |
 | `lib/mail.ts` | The provider, reached over plain HTTP. Logs instead of sending when unconfigured. |
-| `lib/storage.ts` | Presigned URLs and the storage key layout. |
+| `lib/storage.ts` | Presigned URLs, the storage key layout, and deletion -- one request per key, because every S3 implementation answers the single-object form and the batch one reports partial failure in the body rather than the status. |
 | `lib/upload.ts` | The three-step upload, in one place so a new model and a new revision cannot drift apart. |
 | `lib/formats.ts` | What is accepted, and the rejection message that fits the file. |
-| `lib/converter.ts` | Asks GitHub to start a conversion run. |
+| `lib/converter.ts` | Asks GitHub to start a conversion run. Built from `GITHUB_REPOSITORY`, and silent when it fails: an upload that cannot summon a worker is still a good upload. |
+| `lib/models.ts` | Who may delete a model, and deleting one. The rule is a pure function so the route and the catalogue cannot disagree about whether to draw the button. |
 | `lib/env.ts` | Validated environment, including the upload size limit. |
 | `auth.ts` | GitHub and password providers; marks OAuth addresses verified and claims invitations at sign-in. |
+| `components/catalogue/ModelList.tsx` | The catalogue rows: aligned technical columns, status as a dot and a word, and the two-step delete whose confirmation names how many revisions go with the model. Polls only while something is converting. |
+| `components/catalogue/UploadForm.tsx` | The upload button and the destination picker, shown only when there is a choice. |
+| `components/catalogue/RevisionUpload.tsx` | The same upload path, aimed at an existing model. |
+| `components/projects/MemberList.tsx` | Members, invitations waiting, and handing access out. |
+| `components/projects/CreateProject.tsx` | Creating a project. |
+| `components/auth/*.tsx` | Sign-in, register, forgot, reset, the verification banner and sign-out. |
 
 ### Web — routes and pages
 
