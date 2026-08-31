@@ -24,13 +24,19 @@ console.log(`host: ${host}\n`);
 
 const sql = postgres(url, { prepare: false, max: 1 });
 
+// Kept in step with db/schema.ts by hand, which is why `preflight.mjs` asks
+// the migrations instead. This list said the schema was complete while three
+// tables were missing from it.
 const EXPECTED_TABLES = [
   'accounts',
+  'email_tokens',
   'model_versions',
   'models',
+  'project_invitations',
   'project_members',
   'projects',
   'sessions',
+  'sign_in_attempts',
   'users',
   'verification_tokens',
 ];

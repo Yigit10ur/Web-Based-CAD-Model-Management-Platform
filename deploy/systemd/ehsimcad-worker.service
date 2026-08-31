@@ -1,0 +1,41 @@
+# The converter, polling the queue.
+#
+# Nothing reaches in: it connects out to the database and to object storage.
+# More than one may run -- the queue hands each job to exactly one worker --
+# but one is enough until uploads start waiting behind each other.
+
+[Unit]
+Description=EhsimCAD conversion worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ehsimcad
+WorkingDirectory=/opt/ehsimcad/converter
+
+EnvironmentFile=/opt/ehsimcad/.env.deploy
+
+# The worker refuses to start if OpenCascade is not importable, rather than
+# accepting jobs and failing every one of them. If this unit will not start,
+# read the journal before anything else.
+ExecStart=/opt/ehsimcad/converter/.venv/bin/python -m app.worker
+
+# It finishes the job it is on before exiting, so give it room to.
+Restart=always
+RestartSec=10
+KillSignal=SIGTERM
+TimeoutStopSec=300
+
+# Conversion is the code most likely to be handed something hostile: it parses
+# untrusted files for a living.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

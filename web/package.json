@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "db:check": "node --env-file-if-exists=.env.local scripts/check-db.mjs",
     "db:migrate:prod": "node --env-file=.env.prod ./node_modules/drizzle-kit/bin.cjs migrate",
-    "db:check:prod": "node --env-file=.env.prod scripts/check-db.mjs"
+    "db:check:prod": "node --env-file=.env.prod scripts/check-db.mjs",
+    "preflight": "node --env-file-if-exists=.env.local scripts/preflight.mjs"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",

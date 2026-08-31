@@ -1,0 +1,46 @@
+# The web application, without containers.
+#
+#   sudo cp deploy/systemd/*.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now ehsimcad-web ehsimcad-worker
+#
+# Adjust User, WorkingDirectory and the two paths below to match where the
+# application was put and which account owns it.
+
+[Unit]
+Description=EhsimCAD web application
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ehsimcad
+WorkingDirectory=/opt/ehsimcad/web
+
+# Every value is read at request time, so this file is the only thing that has
+# to change between environments.
+EnvironmentFile=/opt/ehsimcad/.env.deploy
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=127.0.0.1
+
+# The standalone server produced by `BUILD_STANDALONE=1 npm run build`. Its
+# static files and `public` have to sit beside it -- see INSTALL.md.
+ExecStart=/usr/bin/node /opt/ehsimcad/web/.next/standalone/server.js
+
+Restart=always
+RestartSec=5
+
+# It reads uploads it did not write and parses them. Nothing here needs to
+# reach outside its own directory.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/ehsimcad/web/.next/cache
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
