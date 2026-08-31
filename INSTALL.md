@@ -171,16 +171,20 @@ docker compose logs worker        # or: journalctl -u ehsimcad-worker -f
 ```
 cd web
 npm ci
-npm run build
+BUILD_STANDALONE=1 npm run build
 cp -r public .next/standalone/
 cp -r .next/static .next/standalone/.next/
 ```
 
-`npm run build` produces a self-contained server at `.next/standalone/server.js`,
-but does not copy the static files into it — they are served, not imported, so
-Next.js leaves them where they are. The two `cp` lines above are what a
-container image does; miss them and the site loads with no styling and no
-icons.
+`BUILD_STANDALONE=1` asks for a self-contained server at
+`.next/standalone/server.js` — the server plus only the dependencies it
+actually reaches. Without it you get an ordinary build, which needs the whole
+`node_modules` tree beside it and is started with `npm start` instead.
+
+The build does not copy the static files into the standalone directory: they
+are served, not imported, so Next.js leaves them where they are. The two `cp`
+lines above are what the container image does; miss them and the site loads
+with no styling and no icons.
 
 **Worker.** Python 3.12.
 

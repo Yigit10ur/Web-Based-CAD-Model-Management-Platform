@@ -24,8 +24,8 @@ Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=HOSTNAME=127.0.0.1
 
-# The standalone server produced by `npm run build`. Its static files and
-# `public` have to sit beside it -- see INSTALL.md.
+# The standalone server produced by `BUILD_STANDALONE=1 npm run build`. Its
+# static files and `public` have to sit beside it -- see INSTALL.md.
 ExecStart=/usr/bin/node /opt/ehsimcad/web/.next/standalone/server.js
 
 Restart=always

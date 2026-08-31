@@ -16,6 +16,10 @@ RUN npm ci
 
 COPY . .
 
+# Asks next.config.ts for the self-contained server. Off by default, so the
+# hosted deployment keeps building the way it always has.
+ENV BUILD_STANDALONE=1
+
 # The build reads no secrets: every value this application needs is read at
 # request time, so one image runs in any environment. Do not add build
 # arguments for configuration -- that is how a production secret ends up in an
