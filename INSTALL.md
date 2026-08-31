@@ -1,10 +1,53 @@
 # Installing EhsimCAD on your own server
 
-For the team doing the install. It assumes no knowledge of the application and
-no access to whoever wrote it.
+For the team doing the install. It assumes no knowledge of the application, and
+it assumes nobody from the project is in the room -- so everything needed to
+finish, and to work out what went wrong, is in this file.
 
 Everything is configuration: the same build runs in every environment, and no
 secret is baked into it.
+
+**Türkçe özet en altta.**
+
+---
+
+## Start here
+
+Four steps, in this order. Each one is explained further down.
+
+```
+cp .env.deploy.example .env.deploy    # fill it in
+docker compose run --rm preflight     # must say Ready
+docker compose run --rm migrate       # creates the tables
+docker compose up -d
+```
+
+If `run` reports that the service does not exist, the Compose version is old
+enough to need the profile named: `docker compose --profile tools run --rm
+preflight`. The two tools are in a profile so that `up` does not start them as
+services.
+
+Three rules. They are the whole of what installs get wrong:
+
+**1. Do not start anything until `preflight` says Ready.** It is the closest
+thing to someone to ask. It connects to the real database and writes a real
+object to the real bucket, then names what is wrong in a sentence you can act
+on -- which key is rejected, which bucket is missing, which address does not
+resolve. A failure here is a five-minute fix; the same failure discovered after
+the service is up looks like the application is broken.
+
+**2. The storage address has to work from users' desktops, not just from the
+server.** Browsers upload files straight to object storage, never through the
+application. An address that resolves only inside the data centre passes every
+check on the server and fails every upload on every machine. See
+[Read this before you configure anything](#read-this-before-you-configure-anything).
+
+**3. The bucket must allow cross-origin requests from the site's address.**
+Same reason. The browser sends `OPTIONS` before it sends the file. Allow the
+origin, the methods `GET`, `PUT`, `HEAD`, and the `content-type` header.
+
+If something goes wrong later, [When something is wrong](#when-something-is-wrong)
+lists what each symptom actually means.
 
 ---
 
@@ -266,3 +309,101 @@ Honest, because the failures are yours to hit:
 
 The preflight check is the thing to trust: it exercises the real database and
 the real bucket, whatever they turn out to be.
+
+
+---
+
+## Türkçe özet
+
+Bu bölüm yukarıdakinin kısaltılmış hâli. Ayrıntı için İngilizce bölümlere bakın;
+komutlar aynıdır.
+
+### Ne kuruyorsunuz
+
+Sürekli çalışan iki süreç: **web** (Node, 3000 portu, sitenin kendisi) ve
+**worker** (Python + OpenCascade, yüklenen CAD dosyalarını dönüştürür). İkisi
+bir Postgres veritabanını ve bir nesne depolama kovasını paylaşır, birbirleriyle
+hiç konuşmaz. Worker durursa site çalışmaya devam eder, yüklemeler sırada
+bekler.
+
+### Sizden istenenler
+
+Postgres 14+ (bir veritabanı ve onu sahiplenen bir kullanıcı), S3 uyumlu bir
+depolama kovası ve okuma/yazma/silme yapabilen bir anahtar çifti, 2 GB RAM'lik
+bir sunucu, ve TLS için önünde bir ters vekil. Vekilin büyük gövde limitine
+ihtiyacı yok — dosyalar uygulamanın üzerinden geçmiyor.
+
+### Sıra
+
+```
+cp .env.deploy.example .env.deploy    # doldurun
+docker compose run --rm preflight     # "Ready" demeli
+docker compose run --rm migrate       # tabloları oluşturur
+docker compose up -d
+```
+
+`.env.deploy` içindeki her ayarın ne işe yaradığı dosyanın kendi içinde
+yazılıdır. Varsayılanı olmayan dört değer: `DATABASE_URL`, depolama
+kimlik bilgileri, `AUTH_SECRET` (`openssl rand -base64 32`) ve `SITE_URL`.
+
+### Üç kural
+
+**1. `preflight` "Ready" demeden hiçbir şey başlatmayın.** Bu komut gerçek
+veritabanına bağlanır, gerçek kovaya gerçek bir nesne yazar, geri okur ve siler.
+Sonra neyin yanlış olduğunu tek cümleyle söyler: hangi anahtar reddedildi,
+hangi kova yok, hangi adres çözülemedi. Burada beş dakikada çözülen bir sorun,
+servis ayağa kalktıktan sonra "uygulama bozuk" gibi görünür.
+
+**2. Depolama adresi kullanıcıların bilgisayarından erişilebilir olmalı**,
+yalnızca sunucudan değil. Tarayıcı dosyayı doğrudan depolamaya yükler, hiçbir
+zaman uygulamanın üzerinden geçmez. Sadece veri merkezi içinden çözülen bir
+adres sunucudaki her testi geçer ve her masaüstünde yüklemeyi başarısız kılar.
+
+**3. Kova, sitenin adresinden gelen çapraz kaynak isteklerine izin vermeli.**
+Aynı sebep. Tarayıcı dosyayı göndermeden önce `OPTIONS` gönderir. Kaynağa,
+`GET` / `PUT` / `HEAD` metotlarına ve `content-type` başlığına izin verin.
+
+### Çalıştığını doğrulama
+
+```
+curl -fsS http://localhost:3000/api/health
+```
+
+`{"status":"ok","database":true}` beklenir. Veritabanına ulaşılamıyorsa 503
+döner. Kimlik doğrulama istemez.
+
+Sonra tarayıcıdan: hesap açın, giriş yapın, bir STEP dosyası yükleyin. `queued`
+→ `converting` → `ready` sırasını izlemeli, tipik bir montaj için bir dakikadan
+kısa sürede. Sonra modeli açın; parça ağacı, özellikler paneli ve kesit
+kontrolü çalışmalı.
+
+`queued` durumunda takılı kalıyorsa worker çalışmıyordur ya da veritabanını
+göremiyordur — `docker compose logs worker`. Kuyruk bir veritabanı tablosudur:
+hiçbir şey kaybolmaz, worker başlar başlamaz dönüşüm yapılır.
+
+### Sorun çıkarsa
+
+Belirtilerin ne anlama geldiği [When something is wrong](#when-something-is-wrong)
+tablosunda. En sık çıkanlar:
+
+| Gördüğünüz | Sebebi |
+|---|---|
+| Tarayıcıda yükleme başarısız, sunucu sağlıklı | Tarayıcı depolama adresine ulaşamıyor ya da kova CORS'a izin vermiyor. Tarayıcının ağ sekmesine bakın: başarısız `OPTIONS` CORS'tur, başarısız bağlantı adrestir. |
+| Model sonsuza kadar `queued` | Worker çalışmıyor ya da veritabanını göremiyor. Veri kaybı yok. |
+| Worker başlamıyor | OpenCascade yüklenemiyorsa bilerek başlamayı reddeder. Günlüğün ilk satırı sebebi yazar. |
+| Girişten sonra tekrar giriş sayfası | `AUTH_SECRET` boş, ya da yük dengeleyici arkasındaki örnekler arasında farklı. |
+| Yeniden başlatınca herkes çıkmış | `AUTH_SECRET` her seferinde yeniden üretiliyor; sabit olmalı. |
+| Şifre sıfırlama e-postası gelmiyor | `MAIL_API_KEY` boşken beklenen davranış: mesaj gönderilmez, web günlüğüne yazılır. |
+
+### Bilinen sınırlar
+
+E-posta HTTPS üzerinden bir sağlayıcı ister; iç SMTP sunucusu henüz
+desteklenmiyor. `MAIL_API_KEY` boş bırakılabilir — şifre sıfırlama ve adres
+doğrulama dışında her şey çalışır. GitHub ile giriş internet erişimi ister;
+kapalı ağda kapatın, e-posta ve şifreyle giriş çalışır.
+
+Bu belgede **denenmemiş olan** şeyler ayrı bir başlıkta yazılıdır:
+[What has not been tested](#what-has-not-been-tested). Konteyner imajları hiç
+derlenmedi, systemd birimleri hiç yüklenmedi, MinIO hiç denenmedi. Güvenilecek
+şey `preflight` çıktısıdır: sizin gerçek veritabanınızı ve gerçek kovanızı
+sınar.
