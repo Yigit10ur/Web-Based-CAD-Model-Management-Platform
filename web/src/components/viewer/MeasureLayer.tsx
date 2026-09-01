@@ -4,7 +4,8 @@ import { Html, Line } from '@react-three/drei';
 import * as THREE from 'three';
 
 import type { Framing } from '@/lib/framing';
-import { formatMeasurement, measure } from '@/lib/measure';
+import { formatIn, measureInMode, modeSpec } from '@/lib/measure';
+import type { MeasureUnit } from '@/lib/measure';
 import type { SnapTarget } from '@/lib/snap';
 import { useViewerStore } from '@/store/viewer-store';
 
@@ -55,31 +56,58 @@ function Label({
   );
 }
 
+/**
+ * The reading before it is taken.
+ *
+ * Worked out the same way as the real one, in the same mode, so what is shown
+ * while deciding is what will be recorded. A mode that cannot answer this pair
+ * of picks shows nothing rather than a plausible number from a different
+ * question.
+ */
 function Preview({
   from,
   to,
   view,
+  unit,
 }: {
-  from: SnapTarget;
+  from: SnapTarget | null;
   to: SnapTarget;
   view: Framing;
+  unit: MeasureUnit;
 }) {
-  const result = measure(from, to);
+  const mode = useViewerStore((state) => state.measureMode);
+  const spec = modeSpec(mode);
+
+  const outcome =
+    spec.picks === 1
+      ? measureInMode(mode, to)
+      : from
+        ? measureInMode(mode, from, to)
+        : null;
+
+  if (!outcome?.ok) return null;
+  const { result } = outcome;
+
+  // A radius drawn on a circle whose centre is the click, or an edge whose
+  // ends coincide, has no line to draw -- only a reading.
+  const hasLine = result.from.distanceTo(result.to) > 1e-9;
 
   return (
     <>
-      <Line
-        points={[result.from, result.to]}
-        color={PENDING_COLOR}
-        lineWidth={1.5}
-        dashed
-        dashSize={view.dashSize}
-        gapSize={view.gapSize}
-        depthTest={false}
-      />
+      {hasLine && (
+        <Line
+          points={[result.from, result.to]}
+          color={PENDING_COLOR}
+          lineWidth={1.5}
+          dashed
+          dashSize={view.dashSize}
+          gapSize={view.gapSize}
+          depthTest={false}
+        />
+      )}
       <Label
         point={result.from.clone().lerp(result.to, 0.5)}
-        text={formatMeasurement(result.value, result.unit)}
+        text={formatIn(result.value, result.unit, unit)}
         tone="hover"
       />
     </>
@@ -88,6 +116,7 @@ function Preview({
 
 export function MeasureLayer({ view }: { view: Framing }) {
   const tool = useViewerStore((state) => state.tool);
+  const unit = useViewerStore((state) => state.measureUnit);
   const hover = useViewerStore((state) => state.hover);
   const pending = useViewerStore((state) => state.pending);
   const measurements = useViewerStore((state) => state.measurements);
@@ -108,7 +137,7 @@ export function MeasureLayer({ view }: { view: Framing }) {
             <Marker point={measurement.to} color={MEASURED_COLOR} radius={view.markerRadius} />
             <Label
               point={midpoint}
-              text={formatMeasurement(measurement.value, measurement.unit)}
+              text={formatIn(measurement.value, measurement.unit, unit)}
               tone="measured"
             />
           </group>
@@ -123,13 +152,12 @@ export function MeasureLayer({ view }: { view: Framing }) {
           snapped, so the reading is there before the second click -- and the
           same reading, worked out the same way, rather than a point-to-point
           preview of a measurement that will turn out to be a gap. */}
-      {pending && hover && <Preview from={pending} to={hover} view={view} />}
+      {tool === 'measure' && hover && (
+        <Preview from={pending} to={hover} view={view} unit={unit} />
+      )}
 
       {tool === 'measure' && hover && (
-        <>
-          <Marker point={hover.point} color={HOVER_COLOR} radius={view.markerRadius} />
-          {!pending && <Label point={hover.point} text={hover.label} tone="hover" />}
-        </>
+        <Marker point={hover.point} color={HOVER_COLOR} radius={view.markerRadius} />
       )}
     </group>
   );

@@ -1,9 +1,10 @@
 'use client';
 
 import type { ModelMetadata } from '@/lib/metadata';
-import { formatMeasurement } from '@/lib/measure';
+import { formatIn } from '@/lib/measure';
 import { useViewerStore } from '@/store/viewer-store';
 
+import { MeasurePanel } from './MeasurePanel';
 import { SectionControls } from './SectionControls';
 
 function format(value: number, digits = 2): string {
@@ -30,7 +31,7 @@ export function PropertiesPanel({ metadata }: { metadata: ModelMetadata }) {
   const tool = useViewerStore((state) => state.tool);
   const measurements = useViewerStore((state) => state.measurements);
   const removeMeasurement = useViewerStore((state) => state.removeMeasurement);
-  const clearMeasurements = useViewerStore((state) => state.clearMeasurements);
+  const measureUnit = useViewerStore((state) => state.measureUnit);
   const measuring = tool === 'measure';
 
   const part = selected ? metadata.parts[selected] : null;
@@ -55,26 +56,22 @@ export function PropertiesPanel({ metadata }: { metadata: ModelMetadata }) {
         <h2 className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Properties</h2>
       </div>
 
+      {/* What to measure, while measuring. */}
+      {measuring && <MeasurePanel />}
+
       {measurements.length > 0 && (
         <div className="border-b border-slate-200 px-3 py-2">
           <div className="flex items-center justify-between pb-1">
             <h3 className="text-xs font-semibold text-slate-500">
               Measurements ({measurements.length})
             </h3>
-            <button
-              type="button"
-              className="text-xs text-blue-600 hover:underline"
-              onClick={clearMeasurements}
-            >
-              clear
-            </button>
           </div>
 
           <ul className="space-y-1">
             {measurements.map((measurement) => (
               <li key={measurement.id} className="group flex items-baseline gap-2">
                 <span className="font-mono text-xs text-slate-900 tabular-nums">
-                  {formatMeasurement(measurement.value, measurement.unit)}
+                  {formatIn(measurement.value, measurement.unit, measureUnit)}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[11px] text-slate-400">
                   {measurement.description}

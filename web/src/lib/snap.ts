@@ -18,6 +18,16 @@ import type { EdgeGeometry, FaceGeometry, SnapGeometry, Vec3 } from './metadata'
 
 export type SnapKind = 'vertex' | 'edge' | 'face';
 
+/**
+ * What the cursor should be looking for.
+ *
+ * Measuring between two faces near their shared edge is otherwise impossible:
+ * an edge within tolerance always wins, so the pick lands on the edge and the
+ * face is unreachable. What is being measured decides what is worth snapping
+ * to.
+ */
+export type SnapPreference = 'any' | 'edge' | 'face';
+
 export interface SnapTarget {
   point: THREE.Vector3;
   kind: SnapKind;
@@ -26,6 +36,8 @@ export interface SnapTarget {
   index: number | null;
   /** Short description of what was snapped to, shown next to the cursor. */
   label: string;
+  /** The B-rep edge itself, when an edge is what was hit. */
+  edge?: EdgeGeometry;
   /**
    * The B-rep face itself, when a face is what was hit.
    *
@@ -113,6 +125,7 @@ export function snapTo(
    * sectioned away and is not on screen.
    */
   clip: THREE.Plane | null = null,
+  wants: SnapPreference = 'any',
 ): SnapTarget | null {
   const visible = (point: THREE.Vector3) => !clip || clip.distanceToPoint(point) >= 0;
 
@@ -129,12 +142,17 @@ export function snapTo(
     face: hitFace,
   };
 
-  if (!snap) return faceFallback;
+  // Asked for a face, give the face: an edge or a corner nearby is not what
+  // is being measured, and letting one win makes the face unpickable at its
+  // border.
+  if (wants === 'face') return visible(hit) ? faceFallback : null;
+
+  if (!snap) return wants === 'edge' ? null : faceFallback;
 
   let best: SnapTarget | null = null;
   let bestDistance = tolerance;
 
-  snap.vertices.forEach((vertex) => {
+  if (wants !== 'edge') snap.vertices.forEach((vertex) => {
     const point = toVector(vertex);
     const distance = point.distanceTo(hit);
     if (distance < bestDistance && visible(point)) {
@@ -151,10 +169,14 @@ export function snapTo(
     const point = closestOnEdge(hit, edge);
     const distance = point.distanceTo(hit);
     if (distance < bestDistance && visible(point)) {
-      best = { point, kind: 'edge', partId, index, label: describeEdge(edge) };
+      best = { point, kind: 'edge', partId, index, label: describeEdge(edge), edge };
       bestDistance = distance;
     }
   });
+
+  // Asked for an edge and none is near: nothing, rather than the face behind
+  // it, so the reading cannot come from something that was not aimed at.
+  if (wants === 'edge') return best;
 
   return best ?? faceFallback;
 }

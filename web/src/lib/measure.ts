@@ -23,7 +23,7 @@
 import * as THREE from 'three';
 
 import type { FaceGeometry } from './metadata';
-import type { SnapTarget } from './snap';
+import type { SnapPreference, SnapTarget } from './snap';
 
 export type MeasurementKind = 'length' | 'gap' | 'angle';
 
@@ -110,4 +110,241 @@ export function measure(a: SnapTarget, b: SnapTarget): MeasurementResult {
 /** How a reading is written next to the line. */
 export function formatMeasurement(value: number, unit: 'mm' | '°'): string {
   return unit === '°' ? `${value.toFixed(1)}°` : `${value.toFixed(2)} mm`;
+}
+
+
+/*
+ * ---------------------------------------------------------------------------
+ * The measurement types, chosen before picking rather than inferred from what
+ * was picked.
+ *
+ * Inferring is fine while there is one answer per pair of picks. It stops
+ * being fine the moment a circular edge can give three -- its length, its
+ * radius or its diameter -- and no amount of cleverness can tell which one was
+ * wanted. Saying first is also what makes the cursor able to help: a face
+ * measurement stops snapping to the edges around the face.
+ * ---------------------------------------------------------------------------
+ */
+
+export type MeasureMode =
+  | 'edge-length'
+  | 'edge-radius'
+  | 'edge-diameter'
+  | 'face-distance'
+  | 'point-distance'
+  | 'face-angle';
+
+export interface MeasureModeSpec {
+  id: MeasureMode;
+  label: string;
+  /** How many picks it takes before there is an answer. */
+  picks: 1 | 2;
+  /** What the cursor should look for while this mode is on. */
+  wants: SnapPreference;
+  /** Said in the toolbar while the mode is on. */
+  hint: string;
+}
+
+export const MEASURE_MODES: MeasureModeSpec[] = [
+  {
+    id: 'edge-length',
+    label: 'Length of edge',
+    picks: 1,
+    wants: 'edge',
+    hint: 'Click an edge',
+  },
+  {
+    id: 'edge-radius',
+    label: 'Radius of edge',
+    picks: 1,
+    wants: 'edge',
+    hint: 'Click a circular edge',
+  },
+  {
+    id: 'edge-diameter',
+    label: 'Diameter of edge',
+    picks: 1,
+    wants: 'edge',
+    hint: 'Click a circular edge',
+  },
+  {
+    id: 'face-distance',
+    label: 'Distance between faces',
+    picks: 2,
+    wants: 'face',
+    hint: 'Click two flat faces',
+  },
+  {
+    id: 'point-distance',
+    label: 'Distance between points',
+    picks: 2,
+    wants: 'any',
+    hint: 'Click two points; corners and edges snap',
+  },
+  {
+    id: 'face-angle',
+    label: 'Angle between faces',
+    picks: 2,
+    wants: 'face',
+    hint: 'Click two flat faces',
+  },
+];
+
+export function modeSpec(mode: MeasureMode): MeasureModeSpec {
+  const found = MEASURE_MODES.find((entry) => entry.id === mode);
+  if (!found) throw new Error(`no measurement mode called ${mode}`);
+  return found;
+}
+
+/** Either a reading, or the reason there is not one. */
+export type MeasureOutcome =
+  | { ok: true; result: MeasurementResult }
+  | { ok: false; reason: string };
+
+const refuse = (reason: string): MeasureOutcome => ({ ok: false, reason });
+
+function circleOf(target: SnapTarget) {
+  const edge = target.edge;
+  if (!edge || edge.kind !== 'circle' || edge.radius === null || !edge.centre) return null;
+  return { centre: new THREE.Vector3(...edge.centre), radius: edge.radius };
+}
+
+/**
+ * Measure in a chosen mode.
+ *
+ * `b` is absent for the modes that take one pick. A mode that cannot answer
+ * says why rather than answering with something else -- a radius mode that
+ * quietly gave a length would be worse than one that did nothing.
+ */
+export function measureInMode(
+  mode: MeasureMode,
+  a: SnapTarget,
+  b?: SnapTarget,
+): MeasureOutcome {
+  switch (mode) {
+    case 'edge-length': {
+      const edge = a.edge;
+      if (!edge) return refuse('That is not an edge — click one of the model’s edges.');
+
+      return {
+        ok: true,
+        result: {
+          kind: 'length',
+          from: new THREE.Vector3(...edge.start),
+          to: new THREE.Vector3(...edge.end),
+          value: edge.length,
+          unit: 'mm',
+          description: edge.kind === 'circle' ? 'circumference' : 'edge',
+        },
+      };
+    }
+
+    case 'edge-radius':
+    case 'edge-diameter': {
+      const circle = circleOf(a);
+      if (!circle) {
+        return refuse('That edge is not circular — a straight edge has no radius.');
+      }
+
+      const wantsDiameter = mode === 'edge-diameter';
+      // Drawn as the line it names: a radius from the centre out to the point
+      // that was clicked, a diameter straight across through it.
+      const opposite = circle.centre.clone().multiplyScalar(2).sub(a.point);
+
+      return {
+        ok: true,
+        result: {
+          kind: 'length',
+          from: wantsDiameter ? a.point.clone() : circle.centre.clone(),
+          to: wantsDiameter ? opposite : a.point.clone(),
+          value: wantsDiameter ? circle.radius * 2 : circle.radius,
+          unit: 'mm',
+          description: wantsDiameter ? 'diameter' : 'radius',
+        },
+      };
+    }
+
+    case 'face-distance':
+    case 'face-angle': {
+      if (!b) return refuse('Pick a second face.');
+
+      const result = measure(a, b);
+      if (result.kind === 'length') {
+        return refuse('Both picks have to be flat faces.');
+      }
+
+      if (mode === 'face-distance' && result.kind === 'angle') {
+        return refuse('Those faces meet — measure the angle between them instead.');
+      }
+      if (mode === 'face-angle' && result.kind === 'gap') {
+        return refuse('Those faces are parallel — measure the distance instead.');
+      }
+
+      return { ok: true, result };
+    }
+
+    default: {
+      if (!b) return refuse('Pick a second point.');
+
+      return {
+        ok: true,
+        result: {
+          kind: 'length',
+          from: a.point.clone(),
+          to: b.point.clone(),
+          value: a.point.distanceTo(b.point),
+          unit: 'mm',
+          description: `${a.label} to ${b.label}`,
+        },
+      };
+    }
+  }
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * Units.
+ *
+ * Everything is measured and stored in millimetres, which is what the
+ * converter writes and what the metadata declares. A unit is a way of reading
+ * the number, never a way of storing it -- converting on the way in would
+ * bake a rounding into the model.
+ * ---------------------------------------------------------------------------
+ */
+
+export type MeasureUnit = 'mm' | 'cm' | 'm' | 'in';
+
+export interface UnitSpec {
+  id: MeasureUnit;
+  label: string;
+  /** Millimetres in one of these. */
+  perUnit: number;
+  /** Enough places to keep a tenth of a millimetre visible. */
+  decimals: number;
+}
+
+export const MEASURE_UNITS: UnitSpec[] = [
+  { id: 'mm', label: 'millimeters (mm)', perUnit: 1, decimals: 2 },
+  { id: 'cm', label: 'centimeters (cm)', perUnit: 10, decimals: 3 },
+  { id: 'm', label: 'meters (m)', perUnit: 1000, decimals: 5 },
+  { id: 'in', label: 'inches (in)', perUnit: 25.4, decimals: 4 },
+];
+
+export function unitSpec(unit: MeasureUnit): UnitSpec {
+  const found = MEASURE_UNITS.find((entry) => entry.id === unit);
+  if (!found) throw new Error(`no unit called ${unit}`);
+  return found;
+}
+
+/**
+ * Write a reading in the unit somebody chose.
+ *
+ * Angles are in degrees whatever the length unit is: a unit menu offering
+ * millimetres has nothing to say about an angle.
+ */
+export function formatIn(value: number, unit: 'mm' | '°', display: MeasureUnit): string {
+  if (unit === '°') return `${value.toFixed(1)}°`;
+
+  const spec = unitSpec(display);
+  return `${(value / spec.perUnit).toFixed(spec.decimals)} ${spec.id}`;
 }
