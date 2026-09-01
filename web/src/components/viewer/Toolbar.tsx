@@ -4,6 +4,7 @@ import { useSyncExternalStore } from 'react';
 
 import type { GeometrySource } from '@/lib/metadata';
 import { keyLabelsFor } from '@/lib/navigation';
+import { STANDARD_VIEWS, type ViewName } from '@/lib/views';
 import { useViewerStore, type ViewerTool } from '@/store/viewer-store';
 
 const TOOLS: { id: ViewerTool; label: string; hint: string }[] = [
@@ -15,6 +16,7 @@ export function Toolbar({ source }: { source: GeometrySource }) {
   const tool = useViewerStore((state) => state.tool);
   const setTool = useViewerStore((state) => state.setTool);
   const picking = useViewerStore((state) => state.section.picking);
+  const setView = useViewerStore((state) => state.setView);
   const active = TOOLS.find((entry) => entry.id === tool);
 
   /*
@@ -50,6 +52,33 @@ export function Toolbar({ source }: { source: GeometrySource }) {
           </button>
         ))}
       </div>
+
+      {/*
+        A list rather than the axis gizmo, which is an indicator now. Every
+        view here keeps the distance already zoomed to, so asking for the top
+        view of a feature gives that feature from above rather than starting
+        the inspection again.
+
+        Resets itself after each choice: it is a set of actions, not a setting,
+        and leaving "Top" showing would claim the camera is still there after
+        the first drag away from it.
+      */}
+      <select
+        value=""
+        onChange={(event) => {
+          if (event.target.value) setView(event.target.value as ViewName);
+          event.target.value = '';
+        }}
+        className="pointer-events-auto rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-600 shadow-sm"
+        aria-label="Standard view"
+      >
+        <option value="">view…</option>
+        {STANDARD_VIEWS.map((view) => (
+          <option key={view.name} value={view.name}>
+            {view.label}
+          </option>
+        ))}
+      </select>
 
       {/* The left button no longer moves the camera, which is right for a CAD
           package and is not guessable. Someone who does not know reaches for

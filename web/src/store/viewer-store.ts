@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { create } from 'zustand';
 
 import type { SectionPlacement } from '@/lib/section';
+import type { ViewName } from '@/lib/views';
 import type { SnapTarget } from '@/lib/snap';
 
 /**
@@ -53,6 +54,15 @@ interface ViewerState {
   /** Geometry under the cursor while measuring. */
   section: SectionState;
 
+  /**
+   * A standard view somebody asked for, and when.
+   *
+   * The timestamp is what makes asking for the same view twice count twice:
+   * the camera has usually been moved in between, and a request that compared
+   * equal to the last one would be ignored exactly when it was meant.
+   */
+  requestedView: { name: ViewName; at: number } | null;
+
   /** Geometry under the cursor while measuring. */
   hover: SnapTarget | null;
   /** First point of a measurement in progress. */
@@ -68,6 +78,7 @@ interface ViewerState {
   setTool: (tool: ViewerTool) => void;
   setExplode: (value: number) => void;
   setSection: (patch: Partial<SectionState>) => void;
+  setView: (name: ViewName) => void;
 
   setHover: (target: SnapTarget | null) => void;
   addMeasurementPoint: (target: SnapTarget) => void;
@@ -104,6 +115,7 @@ function initialState() {
       rotateX: 0,
       rotateY: 0,
     },
+    requestedView: null,
     hover: null,
     pending: null,
     measurements: [],
@@ -167,6 +179,8 @@ export const useViewerStore = create<ViewerState>((set) => ({
   setExplode: (explode) => set({ explode }),
 
   setSection: (patch) => set((state) => ({ section: { ...state.section, ...patch } })),
+
+  setView: (name) => set({ requestedView: { name, at: Date.now() } }),
 
   setHover: (hover) => set({ hover }),
 

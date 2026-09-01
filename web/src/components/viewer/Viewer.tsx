@@ -126,7 +126,17 @@ export function Viewer({ url, metadata }: { url: string; metadata: ModelMetadata
           Y-up world and shows "BOTTOM" on top in a Z-up scene, which is worse
           than no cube at all. A Z-up view cube is its own piece of work. */}
       <GizmoHelper alignment="bottom-right" margin={[72, 72]}>
-        <GizmoViewport axisColors={['#dc2626', '#16a34a', '#2563eb']} labelColor="white" />
+        {/* An indicator, not a control. Clicking an axis used to move the
+            camera, and drei works out how far to move it from the distance to
+            the world origin rather than to the thing being looked at -- so on
+            an assembly sitting away from the origin it threw the camera past
+            the model and left a blank screen. The named views in the toolbar
+            do the same job and know where the model is. */}
+        <GizmoViewport
+          disabled
+          axisColors={['#dc2626', '#16a34a', '#2563eb']}
+          labelColor="white"
+        />
       </GizmoHelper>
     </Canvas>
   );
