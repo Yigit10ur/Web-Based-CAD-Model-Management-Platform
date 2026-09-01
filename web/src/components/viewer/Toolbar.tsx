@@ -33,6 +33,14 @@ export function Toolbar({ source }: { source: GeometrySource }) {
         ))}
       </div>
 
+      {/* The left button no longer moves the camera, which is right for a CAD
+          package and is not guessable. Someone who does not know reaches for
+          the left button, nothing turns, and concludes the viewer is broken --
+          so the layout is on screen rather than in a document. */}
+      <span className="hidden rounded bg-white/80 px-2 py-1 font-mono text-[11px] text-slate-500 lg:inline">
+        middle drag rotate · ctrl pan · shift zoom · alt roll · f fit
+      </span>
+
       {picking ? (
         <span className="rounded bg-amber-500 px-2 py-1 text-[11px] font-medium text-white">
           Click a flat face to cut along it · Esc cancels
