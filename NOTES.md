@@ -90,6 +90,11 @@ rotated would take the click somebody meant for a face. The layout is printed
 in the toolbar, because a left button that does not move the camera is not
 guessable and reads as a broken viewer.
 
+The wheel zooms towards the pointer, not the middle of the screen. Zooming at
+the centre means panning afterwards every single time, which for an application
+whose whole purpose is looking closely at one feature is the wrong default --
+and it is not what a CAD package does.
+
 Note the family split, if this is ever revisited: Inventor and Fusion use the
 middle button to *pan* and Shift+middle to rotate -- the opposite. Picking one
 means the other feels wrong, and there is no layout that feels right to both.

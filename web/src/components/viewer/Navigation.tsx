@@ -172,6 +172,14 @@ export function Navigation({ view }: { view: Framing }) {
       // A nicety on a camera being flown, and a lag on one being aimed at a
       // feature.
       enableDamping={false}
+      /*
+       * The wheel zooms towards the pointer rather than towards the middle of
+       * the screen, which is what a CAD package does and what this application
+       * is for: you put the cursor on the feature you want to look at and it
+       * comes to you. Zooming at the centre means panning afterwards, every
+       * time.
+       */
+      zoomToCursor
       mouseButtons={bindingsFor(modifier)}
     />
   );
