@@ -13,12 +13,16 @@ import * as THREE from 'three';
 
 import {
   bindingsFor,
+  effectiveAction,
   isDoubleClick,
   modifierOf,
   rollAngle,
   DOUBLE_CLICK_MS,
+  INTENT,
   type NavigationModifier,
 } from '@/lib/navigation';
+
+const MODIFIERS: NavigationModifier[] = ['none', 'ctrl', 'shift', 'alt'];
 
 const keys = (patch: Partial<Record<'ctrlKey' | 'shiftKey' | 'altKey' | 'metaKey', boolean>> = {}) => ({
   ctrlKey: false,
@@ -56,45 +60,76 @@ describe('which modifier is in force', () => {
   });
 });
 
-describe('what the buttons do', () => {
-  it('rotates on the middle button with nothing held', () => {
-    expect(bindingsFor('none').MIDDLE).toBe(THREE.MOUSE.ROTATE);
+describe('what the buttons actually do', () => {
+  /*
+   * Asserted through `effectiveAction`, not on the raw map. The first version
+   * of these tests checked what we asked the controls for, and passed while
+   * the application was broken: OrbitControls swaps ROTATE and PAN whenever a
+   * modifier is held, so asking it to pan under Ctrl got rotation. A test that
+   * cannot see that is a test of our intentions.
+   */
+  it.each<NavigationModifier>(['none', 'ctrl', 'shift'])(
+    'does what the layout says under %s',
+    (modifier) => {
+      expect(effectiveAction(bindingsFor(modifier).MIDDLE, modifier)).toBe(INTENT[modifier]);
+    },
+  );
+
+  it('hands Alt to the roll handler instead of to the controls', () => {
+    // Roll is not one of the three things OrbitControls can do, so the split
+    // is deliberate: the controls are told to do nothing, and the drag is
+    // read separately. Bound to rotate here, a drag meant to level the view
+    // would spin the model at the same time.
+    expect(INTENT.alt).toBe('roll');
+    expect(effectiveAction(bindingsFor('alt').MIDDLE, 'alt')).toBe('none');
   });
 
-  it('pans with Control and zooms with Shift', () => {
-    expect(bindingsFor('ctrl').MIDDLE).toBe(THREE.MOUSE.PAN);
-    expect(bindingsFor('shift').MIDDLE).toBe(THREE.MOUSE.DOLLY);
-  });
-
-  it('leaves the middle button to the roll handler under Alt', () => {
-    // Bound to rotate here, the model would spin during a drag meant to level
-    // the view -- both would happen at once.
-    expect(bindingsFor('alt').MIDDLE).toBeUndefined();
+  it('pans on the right button whatever is held', () => {
+    // Not a CAD binding -- there is no context menu to protect here -- and the
+    // only way to pan on hardware with no middle button. It has to survive the
+    // swap too.
+    for (const modifier of MODIFIERS) {
+      expect(effectiveAction(bindingsFor(modifier).RIGHT, modifier)).toBe('pan');
+    }
   });
 
   it('never gives the left button to the camera', () => {
     // The one rule the whole layout rests on: left is for selecting. A left
     // drag that rotated would eat the click meant for a face.
-    for (const modifier of ['none', 'ctrl', 'shift', 'alt'] as NavigationModifier[]) {
-      expect(bindingsFor(modifier).LEFT).toBeUndefined();
+    for (const modifier of MODIFIERS) {
+      expect(effectiveAction(bindingsFor(modifier).LEFT, modifier)).toBe('none');
     }
   });
 
-  it('keeps panning available on the right button throughout', () => {
-    // Not a CAD binding -- there is no context menu to protect here -- and the
-    // only way to pan on hardware with no middle button.
-    for (const modifier of ['none', 'ctrl', 'shift', 'alt'] as NavigationModifier[]) {
-      expect(bindingsFor(modifier).RIGHT).toBe(THREE.MOUSE.PAN);
-    }
-  });
-
-  it('gives each modifier its own action', () => {
+  it('gives each modifier a different action', () => {
     // Two modifiers doing the same thing would mean one of them is not wired.
-    const middles = (['none', 'ctrl', 'shift'] as NavigationModifier[]).map(
-      (modifier) => bindingsFor(modifier).MIDDLE,
+    const actions = MODIFIERS.map((modifier) =>
+      effectiveAction(bindingsFor(modifier).MIDDLE, modifier),
     );
 
-    expect(new Set(middles).size).toBe(3);
+    expect(new Set(actions).size).toBe(MODIFIERS.length);
+  });
+});
+
+describe("the controls' own modifier rule", () => {
+  /*
+   * Modelled rather than worked around, so that a library upgrade which
+   * changes it fails here with a name instead of quietly turning panning back
+   * into rotation on somebody's desk.
+   */
+  it('swaps rotate and pan while Ctrl or Shift is held', () => {
+    expect(effectiveAction(THREE.MOUSE.ROTATE, 'ctrl')).toBe('pan');
+    expect(effectiveAction(THREE.MOUSE.PAN, 'ctrl')).toBe('rotate');
+    expect(effectiveAction(THREE.MOUSE.ROTATE, 'shift')).toBe('pan');
+  });
+
+  it('leaves zoom alone, which is why Shift can reach it', () => {
+    expect(effectiveAction(THREE.MOUSE.DOLLY, 'shift')).toBe('zoom');
+  });
+
+  it('does not watch Alt, which is why roll is ours to do', () => {
+    expect(effectiveAction(THREE.MOUSE.ROTATE, 'alt')).toBe('rotate');
+    expect(effectiveAction(undefined, 'alt')).toBe('none');
   });
 });
 
