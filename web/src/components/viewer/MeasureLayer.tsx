@@ -4,6 +4,8 @@ import { Html, Line } from '@react-three/drei';
 import * as THREE from 'three';
 
 import type { Framing } from '@/lib/framing';
+import { formatMeasurement, measure } from '@/lib/measure';
+import type { SnapTarget } from '@/lib/snap';
 import { useViewerStore } from '@/store/viewer-store';
 
 const PENDING_COLOR = '#f59e0b';
@@ -53,6 +55,37 @@ function Label({
   );
 }
 
+function Preview({
+  from,
+  to,
+  view,
+}: {
+  from: SnapTarget;
+  to: SnapTarget;
+  view: Framing;
+}) {
+  const result = measure(from, to);
+
+  return (
+    <>
+      <Line
+        points={[result.from, result.to]}
+        color={PENDING_COLOR}
+        lineWidth={1.5}
+        dashed
+        dashSize={view.dashSize}
+        gapSize={view.gapSize}
+        depthTest={false}
+      />
+      <Label
+        point={result.from.clone().lerp(result.to, 0.5)}
+        text={formatMeasurement(result.value, result.unit)}
+        tone="hover"
+      />
+    </>
+  );
+}
+
 export function MeasureLayer({ view }: { view: Framing }) {
   const tool = useViewerStore((state) => state.tool);
   const hover = useViewerStore((state) => state.hover);
@@ -75,7 +108,7 @@ export function MeasureLayer({ view }: { view: Framing }) {
             <Marker point={measurement.to} color={MEASURED_COLOR} radius={view.markerRadius} />
             <Label
               point={midpoint}
-              text={`${measurement.distance.toFixed(2)} mm`}
+              text={formatMeasurement(measurement.value, measurement.unit)}
               tone="measured"
             />
           </group>
@@ -86,26 +119,11 @@ export function MeasureLayer({ view }: { view: Framing }) {
         <Marker point={pending.point} color={PENDING_COLOR} radius={view.markerRadius} />
       )}
 
-      {/* The rubber band from the first point to wherever the cursor has
-          snapped, so the length is readable before the second click. */}
-      {pending && hover && (
-        <>
-          <Line
-            points={[pending.point, hover.point]}
-            color={PENDING_COLOR}
-            lineWidth={1.5}
-            dashed
-            dashSize={view.dashSize}
-            gapSize={view.gapSize}
-            depthTest={false}
-          />
-          <Label
-            point={pending.point.clone().lerp(hover.point, 0.5)}
-            text={`${pending.point.distanceTo(hover.point).toFixed(2)} mm`}
-            tone="hover"
-          />
-        </>
-      )}
+      {/* The rubber band from the first pick to wherever the cursor has
+          snapped, so the reading is there before the second click -- and the
+          same reading, worked out the same way, rather than a point-to-point
+          preview of a measurement that will turn out to be a gap. */}
+      {pending && hover && <Preview from={pending} to={hover} view={view} />}
 
       {tool === 'measure' && hover && (
         <>

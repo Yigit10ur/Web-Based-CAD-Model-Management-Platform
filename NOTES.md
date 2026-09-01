@@ -15,13 +15,22 @@ Live at <https://ehsimcad.vercel.app>. Web on Vercel
 (`fra1`), Postgres and object storage on Supabase (Frankfurt), conversion on
 GitHub Actions. Nothing runs between uploads, so nothing is billed.
 
-238 tests pass: 198 in `web` (vitest, against an in-process Postgres), 40 in
+250 tests pass: 210 in `web` (vitest, against an in-process Postgres), 40 in
 `converter` (pytest; the geometry ones skip where OCCT is not installed, which
 is CI).
 
 ---
 
 ## The decisions that shape everything
+
+**Two flat faces are measured between the surfaces, not between the clicks.**
+Picking opposite sides of a 10 mm plate 30 mm apart along the face reads
+31.6 mm point-to-point, which looks entirely reasonable and is wrong. The
+normal comes from the B-rep; the point comes from the click, and for a plane
+that is exact too -- a flat face tessellates into triangles that lie on it.
+That is true of no other kind of face, which is why curved ones are refused
+rather than approximated: a cylinder's metadata gives its radius and the
+direction of its axis but never where that axis is.
 
 **Triangles are for drawing; numbers come from the B-rep.** The browser is sent
 a mesh, but every dimension, volume and centre of mass is read from the original
@@ -247,7 +256,9 @@ catalogue has no pagination either, which is the real scaling limit.
 **Sessions survive a password reset.** JWT strategy; an old cookie stays valid
 until it expires.
 
-**No angle measurement**, though the data for it is already exported. The
+**No angle measurement between edges**, though the data for it is exported.
+Between two flat faces there is one, because a pair of faces that meet has an
+angle and no distance. The
 section plane itself now takes any direction: three named axes, a direction
 borrowed from a flat face, and two dials to rotate away from either.
 
@@ -298,6 +309,7 @@ with GitHub breaks the moment the domain moves without it.
 | `lib/metadata.ts` | The contract, restated in TypeScript. |
 | `lib/snap.ts` | Vertex over edge over face, projected onto the true circle rather than the drawn polygon; ignores anything a section plane has cut away. |
 | `lib/views.ts` | The named standard views -- direction, which way is up, where the camera goes -- and which view each head of the axis indicator asks for. Ours because drei's version measures from the origin. |
+| `lib/measure.ts` | What two picks mean: a length, the gap between two flat faces, or the angle where they meet. Refuses curved faces rather than approximating them. |
 | `lib/navigation.ts` | The mouse layout, and a model of the controls' own modifier rule so we can aim through it rather than fight it. |
 | `lib/section.ts` | The clipping plane. Any unit direction, stored 0..1 across the bounding box so one control behaves the same at any scale; its margin is symmetric, which is what makes 0.5 exactly the middle. Also the rule for which face can lend a direction, and `positionOfPoint` -- the exact inverse of `cutDistance`, which is what puts a borrowed cut *on* the face rather than near it. |
 | `lib/framing.ts` | Camera, clipping planes, grid spacing and annotation sizes, all derived from the model. |

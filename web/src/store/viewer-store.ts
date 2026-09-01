@@ -3,6 +3,7 @@ import { create } from 'zustand';
 
 import type { SectionPlacement } from '@/lib/section';
 import type { ViewName } from '@/lib/views';
+import { measure, type MeasurementKind } from '@/lib/measure';
 import type { SnapTarget } from '@/lib/snap';
 
 /**
@@ -19,10 +20,13 @@ export interface Measurement {
   id: string;
   from: THREE.Vector3;
   to: THREE.Vector3;
-  distance: number;
-  /** What each end snapped to, so a reader can tell corner from surface. */
-  fromLabel: string;
-  toLabel: string;
+  /** Millimetres for a length or a gap, degrees for an angle. */
+  value: number;
+  unit: 'mm' | '°';
+  /** Which question was answered -- the reading alone does not say. */
+  kind: MeasurementKind;
+  /** What was measured, so a reader can tell corner from surface. */
+  description: string;
 }
 
 export interface SectionState extends SectionPlacement {
@@ -188,13 +192,15 @@ export const useViewerStore = create<ViewerState>((set) => ({
     set((state) => {
       if (!state.pending) return { pending: target };
 
+      /*
+       * What the two picks mean is decided in `lib/measure.ts`: two flat faces
+       * are a gap or an angle, anything else is a length between two points.
+       */
+      const result = measure(state.pending, target);
+
       const measurement: Measurement = {
         id: `${Date.now()}-${state.measurements.length}`,
-        from: state.pending.point.clone(),
-        to: target.point.clone(),
-        distance: state.pending.point.distanceTo(target.point),
-        fromLabel: state.pending.label,
-        toLabel: target.label,
+        ...result,
       };
 
       return { pending: null, measurements: [...state.measurements, measurement] };
