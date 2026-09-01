@@ -5,7 +5,7 @@ to be picked up cold: the decisions below are the ones that would otherwise
 have to be re-derived from the code, and the measurements are the ones nobody
 should have to take twice.
 
-Started 2026-08-24. This snapshot: 2026-08-31, `main` at 47 commits.
+Started 2026-08-24. This snapshot: 2026-09-02, `main` at 53 commits.
 
 ---
 
@@ -15,7 +15,7 @@ Live at <https://ehsimcad.vercel.app>. Web on Vercel
 (`fra1`), Postgres and object storage on Supabase (Frankfurt), conversion on
 GitHub Actions. Nothing runs between uploads, so nothing is billed.
 
-194 tests pass: 154 in `web` (vitest, against an in-process Postgres), 40 in
+238 tests pass: 198 in `web` (vitest, against an in-process Postgres), 40 in
 `converter` (pytest; the geometry ones skip where OCCT is not installed, which
 is CI).
 
@@ -81,6 +81,16 @@ with every Turkish character truncated to the low byte of its code point -- not
 overruling the person who chose it. The same test disposes of
 `Open CASCADE STEP translator 7.9 1`, which is what an unnamed STEP file
 declares.
+
+**Standard views are ours, and so is the axis gizmo.** Front, back,
+left, right, top, bottom and isometric are named in the toolbar, and the six
+faces of them are on the indicator in the corner, which is drawn here rather
+than by drei so that clicking a head reaches code that knows where the model
+is. All of them place the camera at the distance already zoomed to -- asking for the top view of a
+feature gives that feature from above, not the assembly again. Top and bottom
+are the only views whose up is not Z: looking straight down the up axis leaves
+a camera with no orientation to take, and that produces no error and no
+picture.
 
 **The mouse is a CAD mouse, not a web one.** Middle drag rotates, Ctrl pans,
 Shift zooms, Alt rolls, `f` fits -- the SolidWorks layout, because that is what
@@ -188,6 +198,13 @@ itself, so an upload is ready in well under a minute.
   needs one, or the test passes everywhere and paints the whole screen.
 - **Presigned URLs are signed per request**, so the browser cache key changes on
   every open and the whole payload is downloaded again.
+- **drei's axis gizmo moves the camera by the distance to the world origin**,
+  not to what is being looked at -- `camera.position.distanceTo(new Vector3())`,
+  where that vector is declared and never assigned. Clicking an axis on an
+  assembly sitting 1.7 m from the origin threw the camera 1.7 m past it and
+  left a blank screen. Third member of the same family as the fixed camera and
+  the fixed marker size: code that assumes the model is at the origin, which
+  CAD data is not.
 - **Local and production are two different Supabase projects.** `web/.env.local`
   is one; Vercel and the Actions secrets are another, the same one
   `converter/.env.fly` holds. Nothing drains the local queue, so an upload made
@@ -280,6 +297,8 @@ with GitHub breaks the moment the domain moves without it.
 |---|---|
 | `lib/metadata.ts` | The contract, restated in TypeScript. |
 | `lib/snap.ts` | Vertex over edge over face, projected onto the true circle rather than the drawn polygon; ignores anything a section plane has cut away. |
+| `lib/views.ts` | The named standard views -- direction, which way is up, where the camera goes -- and which view each head of the axis indicator asks for. Ours because drei's version measures from the origin. |
+| `lib/navigation.ts` | The mouse layout, and a model of the controls' own modifier rule so we can aim through it rather than fight it. |
 | `lib/section.ts` | The clipping plane. Any unit direction, stored 0..1 across the bounding box so one control behaves the same at any scale; its margin is symmetric, which is what makes 0.5 exactly the middle. Also the rule for which face can lend a direction, and `positionOfPoint` -- the exact inverse of `cutDistance`, which is what puts a borrowed cut *on* the face rather than near it. |
 | `lib/framing.ts` | Camera, clipping planes, grid spacing and annotation sizes, all derived from the model. |
 | `lib/bvh.ts` | three-mesh-bvh wiring for raycasting. |
@@ -290,6 +309,8 @@ with GitHub breaks the moment the domain moves without it.
 | `components/viewer/SectionControls.tsx` | The reference row (X, Y, Z, and `face` to borrow one from the model), two rotation dials, flip, centre, and the position slider with a millimetre readout. Offers `face` only where there is a flat face to borrow from. |
 | `components/viewer/ClippedSolid.tsx` | The stencil-buffer cap that makes a cut read as solid material. |
 | `components/viewer/PropertiesPanel.tsx` | Exact mass properties for the selected part; the explode control. |
+| `components/viewer/AxisGizmo.tsx` | The axis indicator in the corner. Drawn rather than borrowed, because the borrowed one moved the camera itself and moved it wrongly. |
+| `components/viewer/Navigation.tsx` | Renders the orbit controls and rewrites their buttons as modifiers are held; also roll, fit, and swinging to a named view. |
 | `components/viewer/Toolbar.tsx` | Select/measure, the warning that a mesh has nothing exact to snap to, and the hint while a section reference is being picked -- the pointer is doing something other than what the tool says, and the panel that started it is off to the side. |
 | `components/viewer/ModelWorkspace.tsx` | Loads the metadata, and clears the viewer store when the model changes. |
 | `store/viewer-store.ts` | Visibility, selection, tool, section, explode and measurements. Reset per model -- part ids restart at `n1_1` in every file, and a section borrowed from a face points at one the next model does not have. |

@@ -6,6 +6,8 @@ import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
 import type { Framing } from '@/lib/framing';
+import { cameraFor, viewByName } from '@/lib/views';
+import { useViewerStore } from '@/store/viewer-store';
 import {
   bindingsFor,
   isDoubleClick,
@@ -43,6 +45,7 @@ export function Navigation({ view }: { view: Framing }) {
   const gl = useThree((state) => state.gl);
 
   const [modifier, setModifier] = useState<NavigationModifier>('none');
+  const requestedView = useViewerStore((state) => state.requestedView);
 
   /*
    * The same value again, for the event handlers. They are registered once, so
@@ -165,6 +168,26 @@ export function Navigation({ view }: { view: Framing }) {
       canvas.removeEventListener('auxclick', onAuxClick);
     };
   }, [camera, controls, gl, view]);
+
+  /*
+   * Swing to a named view, keeping the distance already zoomed to: someone
+   * looking closely at a feature who asks for the top view wants that feature
+   * from above, not the whole assembly again.
+   */
+  useEffect(() => {
+    if (!requestedView || !controls) return;
+
+    const view = viewByName(requestedView.name);
+    const target = controls.target;
+    const distance = camera.position.distanceTo(target);
+    const { position, up } = cameraFor(view, [target.x, target.y, target.z], distance);
+
+    camera.position.set(...position);
+    camera.up.set(...up);
+    camera.lookAt(target);
+    camera.updateProjectionMatrix();
+    controls.update();
+  }, [requestedView, camera, controls]);
 
   return (
     <OrbitControls
