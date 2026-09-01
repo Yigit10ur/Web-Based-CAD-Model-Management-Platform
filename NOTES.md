@@ -15,13 +15,26 @@ Live at <https://ehsimcad.vercel.app>. Web on Vercel
 (`fra1`), Postgres and object storage on Supabase (Frankfurt), conversion on
 GitHub Actions. Nothing runs between uploads, so nothing is billed.
 
-250 tests pass: 210 in `web` (vitest, against an in-process Postgres), 40 in
+269 tests pass: 229 in `web` (vitest, against an in-process Postgres), 40 in
 `converter` (pytest; the geometry ones skip where OCCT is not installed, which
 is CI).
 
 ---
 
 ## The decisions that shape everything
+
+**What is being measured is chosen before picking, not inferred from the
+picks.** Inference is fine while a pair of picks has one answer; it stops being
+fine the moment a circular edge can give three -- its length, its radius or its
+diameter -- and nothing about the click says which was meant. Choosing first is
+also what lets the cursor help: a face measurement stops snapping to the edges
+around the face, which otherwise makes the face unpickable along its whole
+border.
+
+**Units are a way of reading a number, never a way of storing one.** Everything
+is measured and kept in millimetres, which is what the converter writes;
+millimetres, centimetres, metres and inches are conversions applied on the way
+to the screen. Converting on the way in would bake a rounding into the model.
 
 **Two flat faces are measured between the surfaces, not between the clicks.**
 Picking opposite sides of a 10 mm plate 30 mm apart along the face reads
@@ -309,7 +322,7 @@ with GitHub breaks the moment the domain moves without it.
 | `lib/metadata.ts` | The contract, restated in TypeScript. |
 | `lib/snap.ts` | Vertex over edge over face, projected onto the true circle rather than the drawn polygon; ignores anything a section plane has cut away. |
 | `lib/views.ts` | The named standard views -- direction, which way is up, where the camera goes -- and which view each head of the axis indicator asks for. Ours because drei's version measures from the origin. |
-| `lib/measure.ts` | What two picks mean: a length, the gap between two flat faces, or the angle where they meet. Refuses curved faces rather than approximating them. |
+| `lib/measure.ts` | The six measurement types, what each one refuses and why, and the units a reading can be shown in. Refuses curved faces rather than approximating them. |
 | `lib/navigation.ts` | The mouse layout, and a model of the controls' own modifier rule so we can aim through it rather than fight it. |
 | `lib/section.ts` | The clipping plane. Any unit direction, stored 0..1 across the bounding box so one control behaves the same at any scale; its margin is symmetric, which is what makes 0.5 exactly the middle. Also the rule for which face can lend a direction, and `positionOfPoint` -- the exact inverse of `cutDistance`, which is what puts a borrowed cut *on* the face rather than near it. |
 | `lib/framing.ts` | Camera, clipping planes, grid spacing and annotation sizes, all derived from the model. |
@@ -321,6 +334,7 @@ with GitHub breaks the moment the domain moves without it.
 | `components/viewer/SectionControls.tsx` | The reference row (X, Y, Z, and `face` to borrow one from the model), two rotation dials, flip, centre, and the position slider with a millimetre readout. Offers `face` only where there is a flat face to borrow from. |
 | `components/viewer/ClippedSolid.tsx` | The stencil-buffer cap that makes a cut read as solid material. |
 | `components/viewer/PropertiesPanel.tsx` | Exact mass properties for the selected part; the explode control. |
+| `components/viewer/MeasurePanel.tsx` | The measurement menu: what to measure, clearing, and the unit. |
 | `components/viewer/AxisGizmo.tsx` | The axis indicator in the corner. Drawn rather than borrowed, because the borrowed one moved the camera itself and moved it wrongly. |
 | `components/viewer/Navigation.tsx` | Renders the orbit controls and rewrites their buttons as modifiers are held; also roll, fit, and swinging to a named view. |
 | `components/viewer/Toolbar.tsx` | Select/measure, the warning that a mesh has nothing exact to snap to, and the hint while a section reference is being picked -- the pointer is doing something other than what the tool says, and the panel that started it is off to the side. |

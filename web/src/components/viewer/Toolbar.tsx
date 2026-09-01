@@ -4,16 +4,13 @@ import { useSyncExternalStore } from 'react';
 
 import type { GeometrySource } from '@/lib/metadata';
 import { keyLabelsFor } from '@/lib/navigation';
+import { modeSpec } from '@/lib/measure';
 import { STANDARD_VIEWS, type ViewName } from '@/lib/views';
 import { useViewerStore, type ViewerTool } from '@/store/viewer-store';
 
 const TOOLS: { id: ViewerTool; label: string; hint: string }[] = [
   { id: 'select', label: 'Select', hint: 'Click a part to inspect it' },
-  {
-    id: 'measure',
-    label: 'Measure',
-    hint: 'Two points for a length, two flat faces for the gap between them',
-  },
+  { id: 'measure', label: 'Measure', hint: '' },
 ];
 
 export function Toolbar({ source }: { source: GeometrySource }) {
@@ -21,6 +18,7 @@ export function Toolbar({ source }: { source: GeometrySource }) {
   const setTool = useViewerStore((state) => state.setTool);
   const picking = useViewerStore((state) => state.section.picking);
   const setView = useViewerStore((state) => state.setView);
+  const measureMode = useViewerStore((state) => state.measureMode);
   const active = TOOLS.find((entry) => entry.id === tool);
 
   /*
@@ -39,8 +37,8 @@ export function Toolbar({ source }: { source: GeometrySource }) {
   const keys = keyLabelsFor(platform);
 
   return (
-    <div className="pointer-events-none absolute top-3 left-3 z-10 flex items-center gap-2">
-      <div className="pointer-events-auto flex overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm">
+    <div className="pointer-events-none absolute top-3 right-3 left-3 z-10 flex items-center gap-2">
+      <div className="pointer-events-auto flex shrink-0 overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm">
         {TOOLS.map((entry) => (
           <button
             key={entry.id}
@@ -73,7 +71,7 @@ export function Toolbar({ source }: { source: GeometrySource }) {
           if (event.target.value) setView(event.target.value as ViewName);
           event.target.value = '';
         }}
-        className="pointer-events-auto rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-600 shadow-sm"
+        className="pointer-events-auto shrink-0 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-600 shadow-sm"
         aria-label="Standard view"
       >
         <option value="">view…</option>
@@ -88,7 +86,7 @@ export function Toolbar({ source }: { source: GeometrySource }) {
           package and is not guessable. Someone who does not know reaches for
           the left button, nothing turns, and concludes the viewer is broken --
           so the layout is on screen rather than in a document. */}
-      <span className="hidden rounded bg-white/80 px-2 py-1 font-mono text-[11px] text-slate-500 lg:inline">
+      <span className="hidden shrink-0 rounded bg-white/80 px-2 py-1 font-mono text-[11px] text-slate-500 2xl:inline">
         middle drag rotate · {keys.pan} pan · {keys.zoom} zoom · {keys.roll} roll · f fit
       </span>
 
@@ -97,8 +95,8 @@ export function Toolbar({ source }: { source: GeometrySource }) {
           Click a flat face to cut along it · Esc cancels
         </span>
       ) : (
-        <span className="rounded bg-white/80 px-2 py-1 text-[11px] text-slate-500">
-          {active?.hint}
+        <span className="min-w-0 truncate rounded bg-white/80 px-2 py-1 text-[11px] text-slate-500">
+          {tool === 'measure' ? modeSpec(measureMode).hint : active?.hint}
         </span>
       )}
 

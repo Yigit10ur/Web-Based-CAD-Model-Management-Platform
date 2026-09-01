@@ -3,7 +3,13 @@ import { create } from 'zustand';
 
 import type { SectionPlacement } from '@/lib/section';
 import type { ViewName } from '@/lib/views';
-import { measure, type MeasurementKind } from '@/lib/measure';
+import {
+  measureInMode,
+  modeSpec,
+  type MeasureMode,
+  type MeasurementKind,
+  type MeasureUnit,
+} from '@/lib/measure';
 import type { SnapTarget } from '@/lib/snap';
 
 /**
@@ -67,6 +73,12 @@ interface ViewerState {
    */
   requestedView: { name: ViewName; at: number } | null;
 
+  /** Which measurement is being taken, and how it should be read. */
+  measureMode: MeasureMode;
+  measureUnit: MeasureUnit;
+  /** Why the last pick was refused, cleared as soon as one is accepted. */
+  measureError: string | null;
+
   /** Geometry under the cursor while measuring. */
   hover: SnapTarget | null;
   /** First point of a measurement in progress. */
@@ -83,6 +95,8 @@ interface ViewerState {
   setExplode: (value: number) => void;
   setSection: (patch: Partial<SectionState>) => void;
   setView: (name: ViewName) => void;
+  setMeasureMode: (mode: MeasureMode) => void;
+  setMeasureUnit: (unit: MeasureUnit) => void;
 
   setHover: (target: SnapTarget | null) => void;
   addMeasurementPoint: (target: SnapTarget) => void;
@@ -120,6 +134,11 @@ function initialState() {
       rotateY: 0,
     },
     requestedView: null,
+    measureMode: 'point-distance' as MeasureMode,
+    // Not reset per model: it is how this person reads a drawing, not a
+    // property of the thing being read.
+    measureUnit: 'mm' as MeasureUnit,
+    measureError: null,
     hover: null,
     pending: null,
     measurements: [],
@@ -186,24 +205,52 @@ export const useViewerStore = create<ViewerState>((set) => ({
 
   setView: (name) => set({ requestedView: { name, at: Date.now() } }),
 
+  // Changing what is being measured abandons a pick made towards the last
+  // one: a face chosen for a distance is not the first half of an angle.
+  setMeasureMode: (measureMode) =>
+    set({ measureMode, pending: null, hover: null, measureError: null }),
+
+  setMeasureUnit: (measureUnit) => set({ measureUnit }),
+
   setHover: (hover) => set({ hover }),
 
   addMeasurementPoint: (target) =>
     set((state) => {
-      if (!state.pending) return { pending: target };
+      const spec = modeSpec(state.measureMode);
 
-      /*
-       * What the two picks mean is decided in `lib/measure.ts`: two flat faces
-       * are a gap or an angle, anything else is a length between two points.
-       */
-      const result = measure(state.pending, target);
+      // Modes that answer from a single pick never hold one: the reading
+      // arrives on the click.
+      const first = spec.picks === 1 ? target : state.pending;
+      if (!first) {
+        const check = measureInMode(state.measureMode, target);
+        // The first of two picks still has to suit the mode. Finding out on
+        // the second click means having wasted the first.
+        return check.ok || check.reason.startsWith('Pick a second')
+          ? { pending: target, measureError: null }
+          : { measureError: check.reason };
+      }
+
+      const outcome = measureInMode(
+        state.measureMode,
+        first,
+        spec.picks === 1 ? undefined : target,
+      );
+
+      if (!outcome.ok) {
+        // The first pick is kept: the second one was wrong, not both.
+        return { measureError: outcome.reason, pending: spec.picks === 1 ? null : first };
+      }
 
       const measurement: Measurement = {
         id: `${Date.now()}-${state.measurements.length}`,
-        ...result,
+        ...outcome.result,
       };
 
-      return { pending: null, measurements: [...state.measurements, measurement] };
+      return {
+        pending: null,
+        measureError: null,
+        measurements: [...state.measurements, measurement],
+      };
     }),
 
   cancelPending: () => set({ pending: null }),

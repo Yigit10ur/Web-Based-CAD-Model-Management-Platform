@@ -14,6 +14,7 @@ import {
   type ModelMetadata,
 } from '@/lib/metadata';
 import { faceReference, modelBounds, sectionPlane } from '@/lib/section';
+import { modeSpec } from '@/lib/measure';
 import { snapTo } from '@/lib/snap';
 import { useViewerStore } from '@/store/viewer-store';
 
@@ -101,6 +102,7 @@ function Part({
   const setHover = useViewerStore((state) => state.setHover);
   const addMeasurementPoint = useViewerStore((state) => state.addMeasurementPoint);
   const picking = useViewerStore((state) => state.section.picking);
+  const measureMode = useViewerStore((state) => state.measureMode);
   const setSection = useViewerStore((state) => state.setSection);
 
   useEffect(() => {
@@ -138,6 +140,9 @@ function Part({
       brepFace(event),
       tolerance,
       clip,
+      // What is being measured decides what is worth snapping to: a face
+      // measurement must not land on the edge that borders the face.
+      modeSpec(measureMode).wants,
     );
 
   /**

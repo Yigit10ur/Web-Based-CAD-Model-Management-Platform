@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 
 import type { FaceGeometry, Vec3 } from '@/lib/metadata';
-import { formatMeasurement, measure } from '@/lib/measure';
+import { formatIn, formatMeasurement, measure, measureInMode } from '@/lib/measure';
 import type { SnapTarget } from '@/lib/snap';
 
 function plane(normal: Vec3): FaceGeometry {
@@ -173,5 +173,151 @@ describe('how a reading is written', () => {
   it('gives millimetres two decimals and degrees one', () => {
     expect(formatMeasurement(10.005, 'mm')).toBe('10.01 mm');
     expect(formatMeasurement(30.04, '°')).toBe('30.0°');
+  });
+});
+
+describe('measuring in a chosen mode', () => {
+  const circle = (centre: Vec3, radius: number, at: Vec3): SnapTarget => ({
+    point: new THREE.Vector3(...at),
+    kind: 'edge',
+    partId: 'n1_1',
+    index: 0,
+    label: 'circle',
+    edge: {
+      kind: 'circle',
+      start: at,
+      end: at,
+      length: 2 * Math.PI * radius,
+      centre,
+      axis: [0, 0, 1],
+      radius,
+    },
+  });
+
+  const line = (from: Vec3, to: Vec3): SnapTarget => ({
+    point: new THREE.Vector3(...from),
+    kind: 'edge',
+    partId: 'n1_1',
+    index: 1,
+    label: 'edge',
+    edge: {
+      kind: 'line',
+      start: from,
+      end: to,
+      length: Math.hypot(to[0] - from[0], to[1] - from[1], to[2] - from[2]),
+      centre: null,
+      axis: null,
+      radius: null,
+    },
+  });
+
+  it('reads the length off the edge, not off the two ends of a click', () => {
+    const outcome = measureInMode('edge-length', line([0, 0, 0], [30, 40, 0]));
+
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.result.value).toBeCloseTo(50, 9);
+  });
+
+  it('gives a circle its circumference under length', () => {
+    // A circular edge has a length, and it is not the distance between its
+    // ends -- those are the same point.
+    const outcome = measureInMode('edge-length', circle([0, 0, 0], 4, [4, 0, 0]));
+
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.result.value).toBeCloseTo(2 * Math.PI * 4, 6);
+  });
+
+  it('reads radius and diameter off the circle itself', () => {
+    const radius = measureInMode('edge-radius', circle([0, 0, 0], 4, [4, 0, 0]));
+    const diameter = measureInMode('edge-diameter', circle([0, 0, 0], 4, [4, 0, 0]));
+
+    expect(radius.ok && radius.result.value).toBeCloseTo(4, 9);
+    expect(diameter.ok && diameter.result.value).toBeCloseTo(8, 9);
+  });
+
+  it('draws the radius from the centre and the diameter across it', () => {
+    // The line has to be the thing it names, or the number is right and the
+    // picture disagrees with it.
+    const radius = measureInMode('edge-radius', circle([0, 0, 0], 4, [4, 0, 0]));
+    const diameter = measureInMode('edge-diameter', circle([0, 0, 0], 4, [4, 0, 0]));
+
+    expect(radius.ok && radius.result.from.length()).toBeCloseTo(0, 9);
+    expect(radius.ok && radius.result.from.distanceTo(radius.result.to)).toBeCloseTo(4, 9);
+    expect(diameter.ok && diameter.result.from.distanceTo(diameter.result.to)).toBeCloseTo(8, 9);
+  });
+
+  it('refuses a radius on a straight edge, and says why', () => {
+    // Doing nothing would leave somebody clicking the same edge over and over.
+    const outcome = measureInMode('edge-radius', line([0, 0, 0], [10, 0, 0]));
+
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) return;
+    expect(outcome.reason).toMatch(/circular/i);
+  });
+
+  it('refuses a face where an edge was asked for', () => {
+    const outcome = measureInMode('edge-length', onFace([0, 0, 0], [0, 0, 1]));
+
+    expect(outcome.ok).toBe(false);
+  });
+
+  it('sends parallel faces to distance and meeting faces to angle', () => {
+    /*
+     * The two face modes each refuse the other's case rather than answering
+     * it. A distance mode that returned an angle would put a number in
+     * degrees under a heading that says millimetres.
+     */
+    const parallel = [onFace([0, 0, 0], [0, 0, 1]), onFace([0, 0, 10], [0, 0, -1])] as const;
+    const meeting = [onFace([0, 0, 0], [0, 0, 1]), onFace([0, 0, 0], [1, 0, 0])] as const;
+
+    expect(measureInMode('face-distance', ...parallel).ok).toBe(true);
+    expect(measureInMode('face-angle', ...meeting).ok).toBe(true);
+
+    const wrongWay = measureInMode('face-distance', ...meeting);
+    expect(wrongWay.ok).toBe(false);
+    if (!wrongWay.ok) expect(wrongWay.reason).toMatch(/angle/i);
+
+    const alsoWrong = measureInMode('face-angle', ...parallel);
+    expect(alsoWrong.ok).toBe(false);
+    if (!alsoWrong.ok) expect(alsoWrong.reason).toMatch(/distance/i);
+  });
+
+  it('refuses a corner where a face was asked for', () => {
+    const outcome = measureInMode('face-distance', corner([0, 0, 0]), corner([0, 0, 5]));
+
+    expect(outcome.ok).toBe(false);
+  });
+
+  it('measures point to point whatever was picked', () => {
+    // The one mode that takes anything: it is about the two locations, not
+    // about what they belong to.
+    const outcome = measureInMode('point-distance', corner([0, 0, 0]), onFace([0, 0, 5], [0, 0, 1]));
+
+    expect(outcome.ok && outcome.result.value).toBeCloseTo(5, 9);
+  });
+});
+
+describe('reading a measurement in a unit', () => {
+  it('converts without touching what was stored', () => {
+    // Everything is measured in millimetres; a unit is a way of reading it.
+    expect(formatIn(25.4, 'mm', 'mm')).toBe('25.40 mm');
+    expect(formatIn(25.4, 'mm', 'cm')).toBe('2.540 cm');
+    expect(formatIn(25.4, 'mm', 'in')).toBe('1.0000 in');
+    expect(formatIn(1000, 'mm', 'm')).toBe('1.00000 m');
+  });
+
+  it('keeps enough places that a tenth of a millimetre survives', () => {
+    // A metre shown to two places would round 0.1 mm away, and somebody would
+    // read two different holes as the same size.
+    for (const unit of ['mm', 'cm', 'm', 'in'] as const) {
+      expect(formatIn(10, 'mm', unit)).not.toBe(formatIn(10.1, 'mm', unit));
+    }
+  });
+
+  it('leaves angles in degrees whatever the length unit is', () => {
+    // A menu offering millimetres has nothing to say about an angle.
+    expect(formatIn(30, '°', 'in')).toBe('30.0°');
   });
 });
