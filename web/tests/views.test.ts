@@ -12,7 +12,13 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Vec3 } from '@/lib/metadata';
-import { cameraFor, STANDARD_VIEWS, viewByName, type ViewName } from '@/lib/views';
+import {
+  AXIS_HEADS,
+  cameraFor,
+  STANDARD_VIEWS,
+  viewByName,
+  type ViewName,
+} from '@/lib/views';
 
 /** Deliberately nowhere near the origin, which is the whole point. */
 const TARGET: Vec3 = [667, 862, 1268];
@@ -97,5 +103,44 @@ describe('which way is up', () => {
 describe('looking a view up', () => {
   it('refuses a name it does not have', () => {
     expect(() => viewByName('sideways' as ViewName)).toThrow();
+  });
+});
+
+describe('the heads on the axis indicator', () => {
+  it('sends you to the side you clicked', () => {
+    /*
+     * The head you click is where you stand. A sign flipped here gives a view
+     * that works perfectly and shows the opposite face -- nobody reports that,
+     * they just stop trusting the tool.
+     */
+    for (const head of AXIS_HEADS) {
+      expect(viewByName(head.view).direction).toEqual(head.at);
+    }
+  });
+
+  it('covers every view except the isometric one', () => {
+    // Six faces on the indicator, seven views in the list: the isometric has
+    // no axis to sit on and lives in the menu alone.
+    const reachable = new Set(AXIS_HEADS.map((head) => head.view));
+
+    for (const view of STANDARD_VIEWS) {
+      if (view.name === 'iso') continue;
+      expect(reachable.has(view.name)).toBe(true);
+    }
+    expect(reachable.has('iso')).toBe(false);
+  });
+
+  it('gives each head its own view', () => {
+    // Two heads on one view would mean an axis nothing can reach.
+    expect(new Set(AXIS_HEADS.map((head) => head.view)).size).toBe(AXIS_HEADS.length);
+  });
+
+  it('letters one head per axis', () => {
+    // Both ends lettered would put an X on each side of the model.
+    expect(AXIS_HEADS.filter((head) => head.label !== '').map((head) => head.label)).toEqual([
+      'X',
+      'Y',
+      'Z',
+    ]);
   });
 });

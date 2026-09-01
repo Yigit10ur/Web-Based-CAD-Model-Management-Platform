@@ -81,3 +81,29 @@ export function cameraFor(
     up: view.up,
   };
 }
+
+/**
+ * The heads on the axis indicator, and the view each one asks for.
+ *
+ * The head you click is where you stand: clicking the +X head puts the camera
+ * on the +X side, which is the right-hand view. Getting a sign wrong here
+ * gives a view that works perfectly and shows the opposite side, which is the
+ * kind of mistake nobody reports and everybody distrusts.
+ */
+export interface AxisHead {
+  view: ViewName;
+  /** Where the head sits, and equally the direction it looks from. */
+  at: Vec3;
+  /** Only the positive heads are lettered; the others are the same axis. */
+  label: string;
+  color: string;
+}
+
+export const AXIS_HEADS: AxisHead[] = [
+  { view: 'right', at: [1, 0, 0], label: 'X', color: '#dc2626' },
+  { view: 'left', at: [-1, 0, 0], label: '', color: '#dc2626' },
+  { view: 'back', at: [0, 1, 0], label: 'Y', color: '#16a34a' },
+  { view: 'front', at: [0, -1, 0], label: '', color: '#16a34a' },
+  { view: 'top', at: [0, 0, 1], label: 'Z', color: '#2563eb' },
+  { view: 'bottom', at: [0, 0, -1], label: '', color: '#2563eb' },
+];
