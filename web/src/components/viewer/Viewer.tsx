@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { Grid, GizmoHelper, GizmoViewport, OrbitControls } from '@react-three/drei';
+import { Grid, GizmoHelper, GizmoViewport } from '@react-three/drei';
 
 import { FOV, frameModel, type Framing } from '@/lib/framing';
 import type { ModelMetadata } from '@/lib/metadata';
@@ -11,6 +11,7 @@ import { useViewerStore } from '@/store/viewer-store';
 
 import { MeasureLayer } from './MeasureLayer';
 import { Model } from './Model';
+import { Navigation } from './Navigation';
 
 /**
  * Point the camera at the model.
@@ -117,7 +118,9 @@ export function Viewer({ url, metadata }: { url: string; metadata: ModelMetadata
         side={2}
       />
 
-      <OrbitControls makeDefault enableDamping />
+      {/* Renders the orbit controls, because the buttons it gives them change
+          with the modifier being held. */}
+      <Navigation view={view} />
       <FrameOnModel view={view} />
       {/* An axis triad rather than a view cube: drei's cube is labelled for a
           Y-up world and shows "BOTTOM" on top in a Z-up scene, which is worse

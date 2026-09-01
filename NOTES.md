@@ -82,6 +82,23 @@ overruling the person who chose it. The same test disposes of
 `Open CASCADE STEP translator 7.9 1`, which is what an unnamed STEP file
 declares.
 
+**The mouse is a CAD mouse, not a web one.** Middle drag rotates, Ctrl pans,
+Shift zooms, Alt rolls, `f` fits -- the SolidWorks layout, because that is what
+is already in the hands of the people using this. The left button is left for
+selecting: three.js' default gives it rotation, and a left drag that also
+rotated would take the click somebody meant for a face. The layout is printed
+in the toolbar, because a left button that does not move the camera is not
+guessable and reads as a broken viewer.
+
+The wheel zooms towards the pointer, not the middle of the screen. Zooming at
+the centre means panning afterwards every single time, which for an application
+whose whole purpose is looking closely at one feature is the wrong default --
+and it is not what a CAD package does.
+
+Note the family split, if this is ever revisited: Inventor and Fusion use the
+middle button to *pan* and Shift+middle to rotate -- the opposite. Picking one
+means the other feels wrong, and there is no layout that feels right to both.
+
 **The design is light-only.** The starter template's dark-scheme override was
 removed: it changed only the inherited body colour, which left every text input
 drawing near-white on white for anyone whose system was set to dark.
