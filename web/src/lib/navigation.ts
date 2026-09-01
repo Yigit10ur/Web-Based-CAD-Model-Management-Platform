@@ -135,3 +135,23 @@ export function rollAngle(deltaX: number, viewportWidth: number): number {
   if (viewportWidth <= 0) return 0;
   return (deltaX / viewportWidth) * Math.PI;
 }
+
+/**
+ * What to call the modifier keys on this machine.
+ *
+ * A Mac keyboard has no key marked "Alt" -- it is marked Option -- and a
+ * legend that names a key nobody can find is worse than no legend: it reads as
+ * a feature that does not work. Command is offered rather than Control for the
+ * same reason, since both already pan.
+ */
+export interface KeyLabels {
+  pan: string;
+  zoom: string;
+  roll: string;
+}
+
+export function keyLabelsFor(platform: string): KeyLabels {
+  return /mac|iphone|ipad|ipod/i.test(platform)
+    ? { pan: '⌘', zoom: '⇧', roll: '⌥' }
+    : { pan: 'ctrl', zoom: 'shift', roll: 'alt' };
+}

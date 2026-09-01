@@ -14,6 +14,7 @@ import * as THREE from 'three';
 import {
   bindingsFor,
   effectiveAction,
+  keyLabelsFor,
   isDoubleClick,
   modifierOf,
   rollAngle,
@@ -166,5 +167,43 @@ describe('roll', () => {
     // would set `up` to NaN -- which does not throw, it just makes the model
     // disappear.
     expect(rollAngle(50, 0)).toBe(0);
+  });
+});
+
+describe('what the keys are called', () => {
+  /*
+   * This was a real half hour lost. The legend said "alt roll", a Mac keyboard
+   * has no key marked Alt, and the feature was reported as not working -- it
+   * worked perfectly under Option the whole time. A legend naming a key nobody
+   * can find is worse than no legend: it reads as something broken.
+   */
+  it('uses the Mac names on a Mac', () => {
+    const keys = keyLabelsFor(
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+    );
+
+    expect(keys.roll).toBe('⌥');
+    expect(keys.pan).toBe('⌘');
+  });
+
+  it('uses the plain names elsewhere', () => {
+    const keys = keyLabelsFor('Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
+
+    expect(keys.roll).toBe('alt');
+    expect(keys.pan).toBe('ctrl');
+  });
+
+  it('falls back to the plain names when there is nothing to look at', () => {
+    // What the server renders. It has no keyboard, and guessing Mac there
+    // would be a hydration mismatch on every other machine.
+    expect(keyLabelsFor('').roll).toBe('alt');
+  });
+
+  it('offers Command, which the layout actually accepts', () => {
+    // Naming a key that does nothing would be the same mistake again, the
+    // other way round.
+    expect(
+      modifierOf({ ctrlKey: false, shiftKey: false, altKey: false, metaKey: true }),
+    ).toBe('ctrl');
   });
 });
