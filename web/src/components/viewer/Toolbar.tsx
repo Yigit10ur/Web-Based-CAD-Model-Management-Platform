@@ -9,7 +9,11 @@ import { useViewerStore, type ViewerTool } from '@/store/viewer-store';
 
 const TOOLS: { id: ViewerTool; label: string; hint: string }[] = [
   { id: 'select', label: 'Select', hint: 'Click a part to inspect it' },
-  { id: 'measure', label: 'Measure', hint: 'Click two points; Esc cancels' },
+  {
+    id: 'measure',
+    label: 'Measure',
+    hint: 'Two points for a length, two flat faces for the gap between them',
+  },
 ];
 
 export function Toolbar({ source }: { source: GeometrySource }) {

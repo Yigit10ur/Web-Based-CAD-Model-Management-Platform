@@ -1,6 +1,7 @@
 'use client';
 
 import type { ModelMetadata } from '@/lib/metadata';
+import { formatMeasurement } from '@/lib/measure';
 import { useViewerStore } from '@/store/viewer-store';
 
 import { SectionControls } from './SectionControls';
@@ -73,10 +74,10 @@ export function PropertiesPanel({ metadata }: { metadata: ModelMetadata }) {
             {measurements.map((measurement) => (
               <li key={measurement.id} className="group flex items-baseline gap-2">
                 <span className="font-mono text-xs text-slate-900 tabular-nums">
-                  {format(measurement.distance)} mm
+                  {formatMeasurement(measurement.value, measurement.unit)}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[11px] text-slate-400">
-                  {measurement.fromLabel} → {measurement.toLabel}
+                  {measurement.description}
                 </span>
                 <button
                   type="button"

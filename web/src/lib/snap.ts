@@ -14,7 +14,7 @@
 
 import * as THREE from 'three';
 
-import type { EdgeGeometry, SnapGeometry, Vec3 } from './metadata';
+import type { EdgeGeometry, FaceGeometry, SnapGeometry, Vec3 } from './metadata';
 
 export type SnapKind = 'vertex' | 'edge' | 'face';
 
@@ -26,6 +26,14 @@ export interface SnapTarget {
   index: number | null;
   /** Short description of what was snapped to, shown next to the cursor. */
   label: string;
+  /**
+   * The B-rep face itself, when a face is what was hit.
+   *
+   * Carried along rather than looked up later: measuring between two surfaces
+   * needs to know what kind of surfaces they are, and by then the part's snap
+   * data is no longer to hand.
+   */
+  face?: FaceGeometry;
 }
 
 const scratch = new THREE.Vector3();
@@ -110,12 +118,15 @@ export function snapTo(
 
   if (!visible(hit)) return null;
 
+  const hitFace = faceIndex === null ? undefined : snap?.faces[faceIndex];
+
   const faceFallback: SnapTarget = {
     point: hit.clone(),
     kind: 'face',
     partId,
     index: faceIndex,
-    label: snap?.faces[faceIndex ?? -1]?.kind ?? 'point',
+    label: hitFace?.kind ?? 'point',
+    face: hitFace,
   };
 
   if (!snap) return faceFallback;
