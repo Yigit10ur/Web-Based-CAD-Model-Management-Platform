@@ -15,7 +15,7 @@ Live at <https://ehsimcad.vercel.app>. Web on Vercel
 (`fra1`), Postgres and object storage on Supabase (Frankfurt), conversion on
 GitHub Actions. Nothing runs between uploads, so nothing is billed.
 
-301 tests pass: 261 in `web` (vitest, against an in-process Postgres), 40 in
+330 tests pass: 290 in `web` (vitest, against an in-process Postgres), 40 in
 `converter` (pytest; the geometry ones skip where OCCT is not installed, which
 is CI).
 
@@ -56,6 +56,17 @@ border.
 is measured and kept in millimetres, which is what the converter writes;
 millimetres, centimetres, metres and inches are conversions applied on the way
 to the screen. Converting on the way in would bake a rounding into the model.
+
+**Two faces that are not parallel still have a distance -- between the faces,
+not between the planes.** The planes meet; the faces usually do not, and the
+gap between a fin and the plate beside it is what people ask for. Measured on
+the triangles, which for a planar face is exact: a flat face tessellates into
+triangles that lie on it and tile it. The search skips any pair of triangles
+whose bounding boxes are already further apart than the best found, seeded from
+the two nearest each other's centres -- without the seed there is nothing to
+compare against and nothing gets skipped. That took 2000 triangles against 2000
+from 897 ms to 0.68 ms, which is the difference between a measurement and a
+freeze.
 
 **Parallel means within a degree, not within a rounding error.** The threshold
 was eight hundredths of a degree, which no real pair of faces satisfies -- the
@@ -376,6 +387,7 @@ with GitHub breaks the moment the domain moves without it.
 | `lib/metadata.ts` | The contract, restated in TypeScript. |
 | `lib/snap.ts` | Vertex over edge over face, projected onto the true circle rather than the drawn polygon; ignores anything a section plane has cut away. |
 | `lib/views.ts` | The named standard views -- direction, which way is up, where the camera goes -- and which view each head of the axis indicator asks for. Ours because drei's version measures from the origin. |
+| `lib/proximity.ts` | How close two surfaces come: point-to-triangle, segment-to-segment, triangle-to-triangle, and the search over two sets of them. |
 | `lib/measure.ts` | The six measurement types, what each one refuses and why, and the units a reading can be shown in. Refuses curved faces rather than approximating them. |
 | `lib/navigation.ts` | The mouse layout, and a model of the controls' own modifier rule so we can aim through it rather than fight it. |
 | `lib/section.ts` | The clipping plane. Any unit direction, stored 0..1 across the bounding box so one control behaves the same at any scale; its margin is symmetric, which is what makes 0.5 exactly the middle. Also the rule for which face can lend a direction, and `positionOfPoint` -- the exact inverse of `cutDistance`, which is what puts a borrowed cut *on* the face rather than near it. |

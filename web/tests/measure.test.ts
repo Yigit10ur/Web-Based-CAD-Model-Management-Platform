@@ -379,3 +379,89 @@ describe('how nearly parallel counts as parallel', () => {
     expect(square.value).toBeCloseTo(90, 9);
   });
 });
+
+describe('two faces that are not parallel', () => {
+  /** A square face as two triangles, with the geometry a pick would carry. */
+  const facePick = (corners: [number, number, number][][]): SnapTarget => {
+    const positions = new Float32Array(corners.flat(2));
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    return {
+      point: new THREE.Vector3(...corners[0][0]),
+      kind: 'face',
+      partId: 'n1_1',
+      index: 0,
+      label: 'plane',
+      face: plane([0, 0, 1]),
+      surface: {
+        geometry,
+        start: 0,
+        count: corners.length * 3,
+        offset: new THREE.Vector3(),
+      },
+    };
+  };
+
+  /** Flat, in the z = `z` plane, 10 across. */
+  const flat = (z: number) =>
+    facePick([
+      [[0, 0, z], [10, 0, z], [10, 10, z]],
+      [[0, 0, z], [10, 10, z], [0, 10, z]],
+    ]);
+
+  /** Upright, in the x = 0 plane, starting `z` up. */
+  const upright = (z: number) => {
+    const pick = facePick([
+      [[0, 0, z], [0, 10, z], [0, 10, z + 10]],
+      [[0, 0, z], [0, 10, z + 10], [0, 0, z + 10]],
+    ]);
+    return { ...pick, face: plane([1, 0, 0]) };
+  };
+
+  it('measures the gap between two faces at right angles', () => {
+    /*
+     * The reported case. A face and another square to it, standing off with a
+     * real gap: the planes meet, the faces do not, and the gap is what was
+     * being asked for. Refusing it was the wrong answer twice over -- there is
+     * a number, and it is the one somebody wanted.
+     */
+    const result = measure(flat(0), upright(6));
+
+    expect(result.kind).toBe('gap');
+    expect(result.value).toBeCloseTo(6, 9);
+    expect(result.description).toContain('closest');
+  });
+
+  it('draws the line between the two points it measured', () => {
+    const result = measure(flat(0), upright(6));
+
+    expect(result.from.distanceTo(result.to)).toBeCloseTo(result.value, 9);
+  });
+
+  it('reads zero for faces that share an edge', () => {
+    // True, and it says so rather than refusing: the two surfaces touch.
+    expect(measure(flat(0), upright(0)).value).toBeCloseTo(0, 9);
+  });
+
+  it('falls back to the angle when the triangles were not carried', () => {
+    // An older measurement replayed, or a part with no face groups. The angle
+    // is still answerable from the normals alone.
+    const withoutSurface = { ...upright(6), surface: undefined };
+
+    expect(measure(flat(0), withoutSurface).kind).toBe('angle');
+  });
+
+  it('still prefers the perpendicular gap for parallel faces', () => {
+    /*
+     * Two parallel faces have a gap measured along the normal, which is the
+     * thickness -- not the closest approach, which for two offset parallel
+     * faces would run diagonally and read short.
+     */
+    const result = measure(flat(0), { ...flat(4), face: plane([0, 0, -1]) });
+
+    expect(result.kind).toBe('gap');
+    expect(result.description).toBe('between faces');
+    expect(result.value).toBeCloseTo(4, 9);
+  });
+});

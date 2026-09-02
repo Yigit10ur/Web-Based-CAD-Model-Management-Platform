@@ -39,6 +39,22 @@ export interface SnapTarget {
   /** The B-rep edge itself, when an edge is what was hit. */
   edge?: EdgeGeometry;
   /**
+   * Where to find the face's triangles, for measuring against another face
+   * that is not parallel to it.
+   *
+   * References rather than copies: this is filled in on every pointer move,
+   * and copying a face's vertices that often would be work done for nothing
+   * almost every time.
+   */
+  surface?: {
+    geometry: THREE.BufferGeometry;
+    /** Index-unit range, three to a triangle -- the same the highlight draws. */
+    start: number;
+    count: number;
+    /** Where the part is drawn, which an exploded view moves. */
+    offset: THREE.Vector3;
+  };
+  /**
    * The B-rep face itself, when a face is what was hit.
    *
    * Carried along rather than looked up later: measuring between two surfaces
@@ -126,6 +142,7 @@ export function snapTo(
    */
   clip: THREE.Plane | null = null,
   wants: SnapPreference = 'any',
+  surface: SnapTarget['surface'] = undefined,
 ): SnapTarget | null {
   const visible = (point: THREE.Vector3) => !clip || clip.distanceToPoint(point) >= 0;
 
@@ -140,6 +157,7 @@ export function snapTo(
     index: faceIndex,
     label: hitFace?.kind ?? 'point',
     face: hitFace,
+    surface,
   };
 
   // Asked for a face, give the face: an edge or a corner nearby is not what

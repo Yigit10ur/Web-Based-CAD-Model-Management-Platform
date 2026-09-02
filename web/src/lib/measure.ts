@@ -23,6 +23,7 @@
 import * as THREE from 'three';
 
 import type { FaceGeometry } from './metadata';
+import { closestApproach, trianglesOf } from './proximity';
 import type { SnapPreference, SnapTarget } from './snap';
 
 export type MeasurementKind = 'length' | 'gap' | 'angle';
@@ -76,6 +77,33 @@ function planeOf(target: SnapTarget): { normal: THREE.Vector3; point: THREE.Vect
   return { normal: normal.normalize(), point: target.point.clone() };
 }
 
+/**
+ * The closest two faces come, measured on their triangles.
+ *
+ * Null when either face did not bring its triangles along -- an older
+ * measurement replayed, or a pick that resolved to a face the part has no
+ * groups for. The caller then falls back to the angle, which is what it did
+ * before this existed.
+ */
+function surfaceGap(a: SnapTarget, b: SnapTarget): MeasurementResult | null {
+  if (!a.surface || !b.surface) return null;
+
+  const first = trianglesOf(a.surface.geometry, a.surface.start, a.surface.count, a.surface.offset);
+  const second = trianglesOf(b.surface.geometry, b.surface.start, b.surface.count, b.surface.offset);
+
+  const approach = closestApproach(first, second);
+  if (!approach) return null;
+
+  return {
+    kind: 'gap',
+    from: approach.on,
+    to: approach.to,
+    value: approach.distance,
+    unit: 'mm',
+    description: 'closest between faces',
+  };
+}
+
 export function measure(a: SnapTarget, b: SnapTarget): MeasurementResult {
   const first = planeOf(a);
   const second = planeOf(b);
@@ -101,6 +129,18 @@ export function measure(a: SnapTarget, b: SnapTarget): MeasurementResult {
         description: 'between faces',
       };
     }
+
+    /*
+     * Not parallel, so there is no distance between the planes -- they meet.
+     * There is still one between the *faces*, and it is what people ask for:
+     * the gap between a fin and the plate beside it, between a boss and the
+     * wall it stands off from. Those are usually at right angles, which is
+     * exactly where plane arithmetic gives up.
+     *
+     * Exact, because a flat face's triangles lie on it and tile it.
+     */
+    const gap = surfaceGap(a, b);
+    if (gap) return gap;
 
     // Reported as the angle between the surfaces, which is what a drawing
     // dimensions: two faces 30° apart, not the 150° on the other side.
@@ -291,14 +331,14 @@ export function measureInMode(
       }
 
       /*
-       * Both refusals name the angle. "Those faces meet" leaves someone
-       * guessing whether they mis-clicked or the part really is tapered; a
-       * number settles it at a glance -- 0.4° is a mis-read threshold, 47° is
-       * a mis-click.
+       * Only left when the faces are not parallel *and* their triangles were
+       * not to hand -- otherwise there is a closest approach to report, even
+       * at right angles. The angle is named because it is the thing that
+       * explains the refusal.
        */
       if (mode === 'face-distance' && result.kind === 'angle') {
         return refuse(
-          `Those faces are ${result.value.toFixed(1)}° apart, so there is no one distance between them — measure the angle instead, or pick two faces that face each other.`,
+          `Those faces are ${result.value.toFixed(1)}° apart and touch, so the distance between them is zero somewhere — measure the angle instead.`,
         );
       }
       if (mode === 'face-angle' && result.kind === 'gap') {
