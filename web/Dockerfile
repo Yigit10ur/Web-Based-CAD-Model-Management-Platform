@@ -27,6 +27,20 @@ ENV BUILD_STANDALONE=1
 RUN npm run build
 
 
+# The one-shot commands -- bringing the schema up, checking the configuration
+# -- run from here, where the toolchain and the whole of node_modules still
+# are.
+#
+# They cannot run from the image that serves the site. That one carries the
+# self-contained server Next.js traced, and a trace only follows what the
+# application imports: `drizzle-kit` wants esbuild, `preflight.mjs` wants the
+# postgres driver, and neither is reachable from a page. Both were missing, and
+# both are commands the install instructions open with.
+FROM build AS tools
+WORKDIR /srv
+CMD ["node", "scripts/preflight.mjs"]
+
+
 FROM node:22-slim AS run
 
 ENV NODE_ENV=production \
@@ -40,17 +54,6 @@ WORKDIR /srv
 COPY --from=build /srv/.next/standalone ./
 COPY --from=build /srv/.next/static ./.next/static
 COPY --from=build /srv/public ./public
-
-# The migrations and the tools that run and check them. Kept so the schema can
-# be brought up from the same image that serves the application, rather than
-# from a laptop that happens to have the repository:
-#   docker run --rm --env-file .env <image> npx drizzle-kit migrate
-#   docker run --rm --env-file .env <image> node scripts/preflight.mjs
-COPY --from=build /srv/drizzle ./drizzle
-COPY --from=build /srv/drizzle.config.ts ./drizzle.config.ts
-COPY --from=build /srv/scripts ./scripts
-COPY --from=build /srv/node_modules/drizzle-kit ./node_modules/drizzle-kit
-COPY --from=build /srv/node_modules/.bin ./node_modules/.bin
 
 # Nothing here needs root.
 USER node

@@ -294,31 +294,32 @@ that nothing points at. Seconds-wide, and it costs storage, not correctness.
 
 ## What has not been tested
 
-Honest, because the failures are yours to hit. Neither Docker nor systemd
-exists on the machine this was developed on, so what could be verified was
-verified by running the images' own commands outside a container.
-
-**Never run: `docker build`, `docker compose up`, `systemctl start`.** The
-layer mechanics, the base images and the `apt-get` line in the converter image
-are untested. If a build fails, that is where to look first.
-
-**Every command inside the images has been run**, on this machine, against the
-real database and the real bucket:
+Both images have now been built and run, on an arm64 Mac under Colima, against
+a real Postgres and a real S3 bucket:
 
 | Step | Result |
 |---|---|
-| `npm ci` from an empty `node_modules` | installs |
-| `BUILD_STANDALONE=1 npm run build` | produces `.next/standalone` |
-| `node server.js`, started the way the image starts it | serves `/api/health`, `/sign-in`, `/sample` and its static assets |
-| a fresh virtualenv, then `pip install ".[cad]"` | installs, OpenCascade 7.9.3 included |
-| `python -m app.worker` | loads OpenCascade and reaches the database |
-| `uvicorn app.main:app` | `/health` and `/ready` both answer, `occt: true` |
-| every path the Dockerfiles `COPY` | present |
+| `docker compose build` | both images build |
+| `docker compose run --rm preflight` | connects, checks the schema, writes and reads back a test object |
+| `docker compose run --rm migrate` | applies the migrations |
+| `docker compose up -d` | web healthy, worker polling |
+| the site, from outside the container | `/api/health`, `/sign-in` and the viewer all answer |
+| a real STEP file put in the queue | the worker converted it, 7428 triangles, about four seconds |
 
-**Only Supabase-hosted Postgres and storage have been used.** Both are spoken
-to over standard protocols, and the S3 client is already configured for
-path-style addressing, which is what MinIO needs — but MinIO itself has not
-been tried.
+Images: **457 MB** for the web, **2.0 GB** for the converter, which is
+OpenCascade.
+
+**Not tried: `systemctl start`.** There is no systemd on the machine this was
+developed on, so the unit files are written from the install steps rather than
+from a run.
+
+**Not tried: MinIO, or any storage other than Supabase's.** Both are spoken to
+over standard protocols and the S3 client is already configured for path-style
+addressing, which is what MinIO needs — but MinIO itself has not been used.
+
+**Not tried: x86-64.** The images were built on arm64. The base images exist
+for both, and nothing here is architecture-specific, but the build has only
+been run on one.
 
 The preflight check is the thing to trust: it exercises the real database and
 the real bucket, whatever they turn out to be.
@@ -417,18 +418,16 @@ kapalı ağda kapatın, e-posta ve şifreyle giriş çalışır.
 
 ### Denenmemiş olanlar
 
-Bu makinede Docker da systemd de olmadığı için `docker build`, `docker compose
-up` ve `systemctl start` **hiç çalıştırılmadı**. Katman mekaniği, temel imajlar
-ve converter imajındaki `apt-get` satırı sınanmamıştır — derleme başarısız
-olursa önce oraya bakın.
+Her iki imaj da derlendi ve çalıştırıldı — arm64 Mac üzerinde Colima ile,
+gerçek bir Postgres ve gerçek bir S3 kovasına karşı: `docker compose build`,
+`preflight`, `migrate`, `docker compose up -d`, dışarıdan `/api/health` ve
+viewer, ve kuyruğa konan gerçek bir STEP dosyasının worker tarafından
+dönüştürülmesi (7428 üçgen, ~4 saniye). İmajlar: web 457 MB, converter 2,0 GB
+(OpenCascade).
 
-Buna karşılık **imajların içindeki her komut** bu makinede, gerçek veritabanına
-ve gerçek kovaya karşı çalıştırıldı: `npm ci`, `BUILD_STANDALONE=1 npm run
-build`, konteynerin başlattığı gibi `node server.js` (sağlık ucu, giriş sayfası,
-viewer ve statik varlıklar), sıfırdan bir sanal ortamda `pip install ".[cad]"`
-(OpenCascade 7.9.3 dahil), `python -m app.worker` ve `uvicorn app.main:app`.
-Ayrıntılı liste [What has not been tested](#what-has-not-been-tested)
-bölümünde.
+**Denenmeyenler:** `systemctl start` (bu makinede systemd yok, birim dosyaları
+kurulum adımlarından yazıldı), MinIO ya da Supabase dışı bir depolama, ve
+x86-64 mimarisi (imajlar arm64'te derlendi).
 
-MinIO hiç denenmedi. Güvenilecek şey `preflight` çıktısıdır: sizin gerçek
-veritabanınızı ve gerçek kovanızı sınar.
+Güvenilecek şey `preflight` çıktısıdır: sizin gerçek veritabanınızı ve gerçek
+kovanızı sınar.
