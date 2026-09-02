@@ -15,7 +15,7 @@ Live at <https://ehsimcad.vercel.app>. Web on Vercel
 (`fra1`), Postgres and object storage on Supabase (Frankfurt), conversion on
 GitHub Actions. Nothing runs between uploads, so nothing is billed.
 
-332 tests pass: 292 in `web` (vitest, against an in-process Postgres), 40 in
+335 tests pass: 292 in `web` (vitest, against an in-process Postgres), 43 in
 `converter` (pytest; the geometry ones skip where OCCT is not installed, which
 is CI).
 
@@ -110,6 +110,17 @@ frame from the thing on screen.
 **The queue is a Postgres table**, claimed with `FOR UPDATE SKIP LOCKED`. It
 does not care where its workers run, which is what made moving them from a
 container host to CI a change to one file.
+
+**A worker's log is not always read by people allowed the file.** The same
+code runs as a CI job on a public repository, where anyone can read its output,
+and on a company's own server, where they cannot -- so it is written to be safe
+in the more exposed of the two. Identifiers only: no part names, no file names.
+The name a model was given from its CAD file is in the database, where the
+people who may see it already look.
+
+Not fully closed: a conversion that fails still logs the error, and a message
+from OpenCascade could in principle name something out of the file. Making the
+repository private is what closes that, and the on-prem worker sidesteps it.
 
 **The converter runs on GitHub Actions**, started per upload. OpenCascade is
 221 MB installed against Vercel's 250 MB function bundle limit, so it cannot

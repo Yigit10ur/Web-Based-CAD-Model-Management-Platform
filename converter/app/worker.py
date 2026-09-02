@@ -185,7 +185,12 @@ def process(conn: psycopg.Connection, job: dict[str, Any]) -> None:
 
         if name:
             cursor.execute(RENAME_SQL, (name[:200], job["model_id"]))
-            logger.info("named model %s %r from the file", job["model_id"], name)
+            # The name itself is not logged. A worker may be running somewhere
+            # whose output is readable by people who are not allowed the
+            # contents of the file -- a CI job on a public repository is
+            # exactly that -- and a part name is the customer's, not ours. It
+            # is in the database, where the people who may see it already look.
+            logger.info("renamed model %s from the file", job["model_id"])
 
     logger.info("done %s: %d triangles", version_id, result.triangle_count)
 
