@@ -15,13 +15,25 @@ Live at <https://ehsimcad.vercel.app>. Web on Vercel
 (`fra1`), Postgres and object storage on Supabase (Frankfurt), conversion on
 GitHub Actions. Nothing runs between uploads, so nothing is billed.
 
-269 tests pass: 229 in `web` (vitest, against an in-process Postgres), 40 in
+279 tests pass: 239 in `web` (vitest, against an in-process Postgres), 40 in
 `converter` (pytest; the geometry ones skip where OCCT is not installed, which
 is CI).
 
 ---
 
 ## The decisions that shape everything
+
+**The section plane can be pulled on the model, and set by number in the
+panel.** Neither replaces the other: a slider is how you say "exactly halfway",
+a handle is how you say "here". Dragging a handle chooses its axis too, so the
+triad is a whole control rather than a step after the buttons.
+
+A drag is not "move it by how far the mouse moved". The handle is a line in
+space seen through a perspective camera, so the same movement of the hand means
+a different distance depending on where the axis is and how it is foreshortened.
+The plane goes to the point on the axis nearest the line the cursor is pointing
+along, which is what keeps the handle under the pointer however the view is
+turned.
 
 **What is being measured is chosen before picking, not inferred from the
 picks.** Inference is fine while a pair of picks has one answer; it stops being
@@ -334,6 +346,7 @@ with GitHub breaks the moment the domain moves without it.
 | `components/viewer/SectionControls.tsx` | The reference row (X, Y, Z, and `face` to borrow one from the model), two rotation dials, flip, centre, and the position slider with a millimetre readout. Offers `face` only where there is a flat face to borrow from. |
 | `components/viewer/ClippedSolid.tsx` | The stencil-buffer cap that makes a cut read as solid material. |
 | `components/viewer/PropertiesPanel.tsx` | Exact mass properties for the selected part; the explode control. |
+| `components/viewer/SectionHandles.tsx` | The triad on the cut. Follows the drag on the canvas rather than through R3F's pointer events, which only reach the object under the cursor -- and the cursor leaves a thin arrow immediately. |
 | `components/viewer/MeasurePanel.tsx` | The measurement menu: what to measure, clearing, and the unit. |
 | `components/viewer/AxisGizmo.tsx` | The axis indicator in the corner. Drawn rather than borrowed, because the borrowed one moved the camera itself and moved it wrongly. |
 | `components/viewer/Navigation.tsx` | Renders the orbit controls and rewrites their buttons as modifiers are held; also roll, fit, and swinging to a named view. |
