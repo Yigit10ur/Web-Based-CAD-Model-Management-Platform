@@ -322,3 +322,46 @@ export function handleOrigin(placement: SectionPlacement, bounds: BBox): THREE.V
     cutDistance(placement, bounds) - centre.dot(normal),
   );
 }
+
+/** Where a box sits relative to the cut. */
+export type BoxSide = 'visible' | 'clipped' | 'crossing';
+
+/**
+ * Which of the three a part is, without looking at a single triangle.
+ *
+ * Sectioning costs, per part, two extra passes over its geometry, a capping
+ * quad and a stencil clear -- and almost none of that is needed. A plane
+ * through an assembly crosses a handful of its parts; the rest are wholly on
+ * one side or the other. Those in front need drawing and nothing else, and
+ * those behind need nothing at all: drawing them and letting the GPU throw
+ * away every fragment is work that was never going to appear.
+ *
+ * The test is the box's centre against the plane, give or take how far the box
+ * reaches along the normal. Conservative in the only direction that is safe --
+ * a box that merely touches the plane counts as crossing, so nothing is
+ * skipped that should have been drawn.
+ */
+export function boxSide(bounds: BBox, plane: THREE.Plane): BoxSide {
+  const [low, high] = bounds;
+
+  let centreDistance = plane.constant;
+  let reach = 0;
+  for (let axis = 0; axis < 3; axis += 1) {
+    const component = plane.normal.getComponent(axis);
+    centreDistance += ((low[axis] + high[axis]) / 2) * component;
+    reach += Math.abs(((high[axis] - low[axis]) / 2) * component);
+  }
+
+  // three.js keeps the half space where normal . point + constant > 0.
+  if (centreDistance >= reach) return 'visible';
+  if (centreDistance <= -reach) return 'clipped';
+  return 'crossing';
+}
+
+/** A part's box where it is actually drawn, which an exploded view moves. */
+export function shiftBox(bounds: BBox, offset: THREE.Vector3): BBox {
+  return [
+    [bounds[0][0] + offset.x, bounds[0][1] + offset.y, bounds[0][2] + offset.z],
+    [bounds[1][0] + offset.x, bounds[1][1] + offset.y, bounds[1][2] + offset.z],
+  ];
+}

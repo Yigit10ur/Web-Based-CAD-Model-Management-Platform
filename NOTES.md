@@ -15,7 +15,7 @@ Live at <https://ehsimcad.vercel.app>. Web on Vercel
 (`fra1`), Postgres and object storage on Supabase (Frankfurt), conversion on
 GitHub Actions. Nothing runs between uploads, so nothing is billed.
 
-279 tests pass: 239 in `web` (vitest, against an in-process Postgres), 40 in
+285 tests pass: 245 in `web` (vitest, against an in-process Postgres), 40 in
 `converter` (pytest; the geometry ones skip where OCCT is not installed, which
 is CI).
 
@@ -199,6 +199,22 @@ Frame rate on an M1 Pro: 120 fps, which is the display's ceiling rather than
 the application's, with 20 MB of GPU memory. The 500-part model was reported
 smooth; no figure was taken.
 
+**Sectioning is only paid for where the plane actually cuts.** With a section
+on, a part costs two extra passes over its geometry, a capping quad and a
+stencil clear -- five draws instead of two. A plane through an assembly crosses
+a handful of its parts, so each part is tested against the plane first: behind
+it, nothing is drawn at all; in front, no cap and no stencil. Measured on the
+500-part assembly, cutting through the middle:
+
+| axis | crossing | in front | discarded | draws | stencil clears |
+|---|---|---|---|---|---|
+| X | 17 | 247 | 236 | 2500 → 579 | 500 → 17 |
+| Y | 0 | 253 | 247 | 2500 → 506 | 500 → 0 |
+| Z | 100 | 400 | 0 | 2500 → 1300 | 500 → 100 |
+
+The last column is the one that mattered: a full stencil-buffer clear per part
+per frame.
+
 **The limit is part count, not triangle count** -- each part costs a solid and
 an edge set, so two draw calls. The first lever, if one is needed, is merging
 edge lines by material, which halves them.
@@ -232,6 +248,11 @@ itself, so an upload is ready in well under a minute.
   needs one, or the test passes everywhere and paints the whole screen.
 - **Presigned URLs are signed per request**, so the browser cache key changes on
   every open and the whole payload is downloaded again.
+- **The section cap is placed at the point on the plane nearest the world
+  origin** (`Plane.coplanarPoint`), so on an assembly that sits away from the
+  origin in X or Y the capping quad is drawn beside the model rather than
+  across it, and the cut reads as hollow. Not yet fixed; the fourth member of
+  the family below.
 - **drei's axis gizmo moves the camera by the distance to the world origin**,
   not to what is being looked at -- `camera.position.distanceTo(new Vector3())`,
   where that vector is declared and never assigned. Clicking an axis on an
