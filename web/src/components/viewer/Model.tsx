@@ -7,6 +7,7 @@ import * as THREE from 'three';
 
 import '@/lib/bvh';
 import {
+  faceDrawRange,
   faceOfTriangle,
   modelCentre,
   modelDiagonal,
@@ -25,10 +26,14 @@ import { snapTo } from '@/lib/snap';
 import { useViewerStore } from '@/store/viewer-store';
 
 import { ClippedSolid } from './ClippedSolid';
+import { FaceHighlight } from './FaceHighlight';
 
 const EDGE_SUFFIX = '__edges';
 
 const SELECTED_COLOR = new THREE.Color('#2563eb');
+/** Under the cursor, and already taken -- the amber matches the pending marker. */
+const FACE_HOVER_COLOR = '#38bdf8';
+const FACE_PICKED_COLOR = '#f59e0b';
 const EDGE_COLOR = new THREE.Color('#334155');
 const SELECTED_EDGE_COLOR = new THREE.Color('#1e3a8a');
 
@@ -112,6 +117,8 @@ function Part({
   const addMeasurementPoint = useViewerStore((state) => state.addMeasurementPoint);
   const picking = useViewerStore((state) => state.section.picking);
   const measureMode = useViewerStore((state) => state.measureMode);
+  const hover = useViewerStore((state) => state.hover);
+  const pending = useViewerStore((state) => state.pending);
   const setSection = useViewerStore((state) => state.setSection);
 
   useEffect(() => {
@@ -229,6 +236,24 @@ function Part({
 
   const planes = clip ? [clip] : [];
 
+  /*
+   * Which face of this part to light up, if any.
+   *
+   * Only while a face is what is being measured. In point mode the cursor is
+   * aiming at a corner or an edge, and lighting up the whole face behind it
+   * would say the wrong thing about what the next click will take.
+   */
+  const groups = metadata.face_groups[part.id];
+  const wantsFaces = tool === 'measure' && modeSpec(measureMode).wants === 'face';
+
+  const litFace = (target: typeof hover) =>
+    wantsFaces && target?.kind === 'face' && target.partId === part.id
+      ? faceDrawRange(groups, target.index)
+      : null;
+
+  const hovered = litFace(hover);
+  const picked = litFace(pending);
+
   return (
     <group position={position.clone().add(offset)} quaternion={quaternion} scale={scale}>
       {/* Capped only where the plane actually passes through material. A part
@@ -257,6 +282,26 @@ function Part({
           clippingPlanes={planes}
         />
       </mesh>
+
+      {/* The face already taken stays lit, so a measurement in progress shows
+          both halves of itself. Drawn after the hover so that pointing back at
+          it does not hide which one is which. */}
+      {hovered && (
+        <FaceHighlight
+          geometry={part.surface}
+          range={hovered}
+          color={FACE_HOVER_COLOR}
+          clip={clip}
+        />
+      )}
+      {picked && (
+        <FaceHighlight
+          geometry={part.surface}
+          range={picked}
+          color={FACE_PICKED_COLOR}
+          clip={clip}
+        />
+      )}
 
       {part.edges && (
         <lineSegments geometry={part.edges} raycast={() => null}>

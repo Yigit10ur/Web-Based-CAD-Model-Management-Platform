@@ -123,6 +123,29 @@ export function faceOfTriangle(
   return index === -1 ? null : index;
 }
 
+/**
+ * The slice of a part's triangle list that one B-rep face occupies.
+ *
+ * Given in index units, which is what `setDrawRange` wants: a triangle is
+ * three of them. Drawing a single face is how a face can be lit up under the
+ * cursor without touching the rest of the part -- the same range the converter
+ * used to say which triangles came from which face.
+ */
+export function faceDrawRange(
+  ranges: [number, number][] | undefined,
+  faceIndex: number | null,
+): { start: number; count: number } | null {
+  if (!ranges || faceIndex === null) return null;
+
+  const range = ranges[faceIndex];
+  if (!range) return null;
+
+  const [first, last] = range;
+  if (last <= first) return null;
+
+  return { start: first * 3, count: (last - first) * 3 };
+}
+
 /** Diagonal of the whole model's bounding box, used to scale snap tolerance. */
 export function modelDiagonal(parts: Record<string, PartMetadata>): number {
   const boxes = Object.values(parts);

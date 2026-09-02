@@ -15,7 +15,7 @@ Live at <https://ehsimcad.vercel.app>. Web on Vercel
 (`fra1`), Postgres and object storage on Supabase (Frankfurt), conversion on
 GitHub Actions. Nothing runs between uploads, so nothing is billed.
 
-285 tests pass: 245 in `web` (vitest, against an in-process Postgres), 40 in
+291 tests pass: 251 in `web` (vitest, against an in-process Postgres), 40 in
 `converter` (pytest; the geometry ones skip where OCCT is not installed, which
 is CI).
 
@@ -34,6 +34,15 @@ a different distance depending on where the axis is and how it is foreshortened.
 The plane goes to the point on the axis nearest the line the cursor is pointing
 along, which is what keeps the handle under the pointer however the view is
 turned.
+
+**A face being measured is lit up: under the cursor, and again once taken.**
+Measuring between two surfaces asks you to aim at a surface, and a marker at a
+point does not say which surface the point is on. The highlight shares its
+buffers with the part's own geometry and only draws a different range of it --
+the face groups the converter already writes -- so pointing at a face costs no
+new geometry. Only while a face is what is being measured: in point mode the
+cursor is aiming at a corner or an edge, and lighting the face behind it would
+say the wrong thing about what the next click takes.
 
 **What is being measured is chosen before picking, not inferred from the
 picks.** Inference is fine while a pair of picks has one answer; it stops being
@@ -367,6 +376,7 @@ with GitHub breaks the moment the domain moves without it.
 | `components/viewer/SectionControls.tsx` | The reference row (X, Y, Z, and `face` to borrow one from the model), two rotation dials, flip, centre, and the position slider with a millimetre readout. Offers `face` only where there is a flat face to borrow from. |
 | `components/viewer/ClippedSolid.tsx` | The stencil-buffer cap that makes a cut read as solid material. |
 | `components/viewer/PropertiesPanel.tsx` | Exact mass properties for the selected part; the explode control. |
+| `components/viewer/FaceHighlight.tsx` | One B-rep face drawn on top of the part it belongs to, sharing the part's buffers and changing only the range drawn. |
 | `components/viewer/SectionHandles.tsx` | The triad on the cut. Follows the drag on the canvas rather than through R3F's pointer events, which only reach the object under the cursor -- and the cursor leaves a thin arrow immediately. |
 | `components/viewer/MeasurePanel.tsx` | The measurement menu: what to measure, clearing, and the unit. |
 | `components/viewer/AxisGizmo.tsx` | The axis indicator in the corner. Drawn rather than borrowed, because the borrowed one moved the camera itself and moved it wrongly. |
