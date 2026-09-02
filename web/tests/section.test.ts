@@ -16,6 +16,7 @@ import type { FaceGeometry } from '@/lib/metadata';
 import {
   axisDragPosition,
   boxSide,
+  capPlacement,
   shiftBox,
   closestPointOnAxis,
   cutDistance,
@@ -572,5 +573,90 @@ describe('what the cut means for one part', () => {
     expect(boxSide(box, plane)).toBe('crossing');
     expect(boxSide(shiftBox(box, new THREE.Vector3(0, 0, 100)), plane)).toBe('clipped');
     expect(boxSide(shiftBox(box, new THREE.Vector3(0, 0, -100)), plane)).toBe('visible');
+  });
+});
+
+describe('where the cap that fills a cut face goes', () => {
+  /*
+   * The bug this replaces: the quad went to `Plane.coplanarPoint`, the point
+   * on the plane nearest the world *origin*. Fine while the model is near the
+   * origin, and CAD data is not -- an assembly a metre and a half out had its
+   * caps drawn beside it and the cut read as hollow.
+   */
+  const part: BBox = [
+    [660, 855, 1265],
+    [670, 865, 1271],
+  ];
+  const nowhere = new THREE.Vector3(0, 0, 0);
+
+  /** Keeps everything below `at` in Z, the way the viewer builds its plane. */
+  const cutAtZ = (at: number) => new THREE.Plane(new THREE.Vector3(0, 0, -1), at);
+
+  it('lands on the part, not near the origin', () => {
+    const { centre } = capPlacement(part, nowhere, cutAtZ(1268));
+
+    expect(centre.x).toBeCloseTo(665, 9);
+    expect(centre.y).toBeCloseTo(860, 9);
+  });
+
+  it('lands on the plane', () => {
+    // The one thing that makes it a cap rather than a floating square.
+    for (const at of [1265.5, 1268, 1270.5]) {
+      const plane = cutAtZ(at);
+      const { centre } = capPlacement(part, nowhere, plane);
+
+      expect(plane.distanceToPoint(centre)).toBeCloseTo(0, 9);
+    }
+  });
+
+  it('is big enough to cover any cut through the part', () => {
+    /*
+     * A plane cuts a box in a section no wider than the box's own diagonal, so
+     * that is the size. Too small and the cut face is filled in only in the
+     * middle, with the rest still showing through.
+     */
+    const { size } = capPlacement(part, nowhere, cutAtZ(1268));
+    const diagonal = Math.hypot(10, 10, 6);
+
+    expect(size).toBeGreaterThanOrEqual(diagonal);
+  });
+
+  it('is sized to the part, not to the assembly around it', () => {
+    // Every part drawing a quad the size of the whole model is overdraw
+    // measured in screens, once per part.
+    const small: BBox = [
+      [0, 0, 0],
+      [4, 4, 4],
+    ];
+
+    expect(capPlacement(small, nowhere, cutAtZ(2)).size).toBeLessThan(
+      capPlacement(part, nowhere, cutAtZ(1268)).size,
+    );
+  });
+
+  it('follows a part that has been exploded away', () => {
+    /*
+     * The offset moves where the part is drawn, so it moves what the plane
+     * cuts -- but the quad is positioned inside the part's own group, which
+     * the offset has already moved. Applying it twice would push the cap off
+     * the part by exactly the explode distance.
+     */
+    const offset = new THREE.Vector3(0, 0, 3);
+    const plane = cutAtZ(1271);
+
+    const { centre } = capPlacement(part, offset, plane);
+
+    // Drawn at centre + offset, and that is what has to sit on the plane.
+    expect(plane.distanceToPoint(centre.clone().add(offset))).toBeCloseTo(0, 9);
+  });
+
+  it('works for a tilted cut as well as a square one', () => {
+    const normal = new THREE.Vector3(1, 1, 1).normalize();
+    const through = new THREE.Vector3(665, 860, 1268);
+    const plane = new THREE.Plane(normal.clone().negate(), through.dot(normal));
+
+    const { centre } = capPlacement(part, nowhere, plane);
+
+    expect(plane.distanceToPoint(centre)).toBeCloseTo(0, 9);
   });
 });

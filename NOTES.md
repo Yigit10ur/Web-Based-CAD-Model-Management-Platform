@@ -15,7 +15,7 @@ Live at <https://ehsimcad.vercel.app>. Web on Vercel
 (`fra1`), Postgres and object storage on Supabase (Frankfurt), conversion on
 GitHub Actions. Nothing runs between uploads, so nothing is billed.
 
-291 tests pass: 251 in `web` (vitest, against an in-process Postgres), 40 in
+297 tests pass: 257 in `web` (vitest, against an in-process Postgres), 40 in
 `converter` (pytest; the geometry ones skip where OCCT is not installed, which
 is CI).
 
@@ -208,6 +208,14 @@ Frame rate on an M1 Pro: 120 fps, which is the display's ceiling rather than
 the application's, with 20 MB of GPU memory. The 500-part model was reported
 smooth; no figure was taken.
 
+**The cap that fills a cut face goes on the part, and is sized to the part.**
+It used to go at `Plane.coplanarPoint` -- the point on the plane nearest the
+world *origin* -- and be sized to the whole model. Both were wrong for the same
+reason: an assembly a metre and a half from the origin had its caps drawn
+beside it, and the cut read as hollow. A plane cuts a box in a section no wider
+than the box's own diagonal, so that is the size; the old one meant every part
+drawing a quad the size of the assembly.
+
 **Sectioning is only paid for where the plane actually cuts.** With a section
 on, a part costs two extra passes over its geometry, a capping quad and a
 stencil clear -- five draws instead of two. A plane through an assembly crosses
@@ -257,11 +265,6 @@ itself, so an upload is ready in well under a minute.
   needs one, or the test passes everywhere and paints the whole screen.
 - **Presigned URLs are signed per request**, so the browser cache key changes on
   every open and the whole payload is downloaded again.
-- **The section cap is placed at the point on the plane nearest the world
-  origin** (`Plane.coplanarPoint`), so on an assembly that sits away from the
-  origin in X or Y the capping quad is drawn beside the model rather than
-  across it, and the cut reads as hollow. Not yet fixed; the fourth member of
-  the family below.
 - **drei's axis gizmo moves the camera by the distance to the world origin**,
   not to what is being looked at -- `camera.position.distanceTo(new Vector3())`,
   where that vector is declared and never assigned. Clicking an axis on an

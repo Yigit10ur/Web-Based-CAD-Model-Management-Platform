@@ -16,6 +16,7 @@ import {
 } from '@/lib/metadata';
 import {
   boxSide,
+  capPlacement,
   faceReference,
   modelBounds,
   sectionPlane,
@@ -92,7 +93,6 @@ function Part({
   offset,
   tolerance,
   clip,
-  capSize,
   bounds,
   bbox,
   order,
@@ -103,7 +103,6 @@ function Part({
   /** World-space snap radius, scaled by the caller to the model's size. */
   tolerance: number;
   clip: THREE.Plane | null;
-  capSize: number;
   bounds: BBox;
   /** This part's own box, for deciding what the cut does to it. */
   bbox: BBox;
@@ -264,7 +263,7 @@ function Part({
           geometry={part.surface}
           plane={clip}
           color={isSelected ? SELECTED_COLOR : part.color}
-          size={capSize}
+          {...capPlacement(bbox, offset, clip)}
           order={order}
         />
       )}
@@ -327,7 +326,6 @@ export function Model({ url, metadata }: { url: string; metadata: ModelMetadata 
 
   const section = useViewerStore((state) => state.section);
   const bounds = useMemo(() => modelBounds(metadata.parts), [metadata]);
-  const diagonal = useMemo(() => modelDiagonal(metadata.parts), [metadata]);
 
   const clip = useMemo(
     () => (section.enabled ? sectionPlane(section, bounds) : null),
@@ -353,7 +351,6 @@ export function Model({ url, metadata }: { url: string; metadata: ModelMetadata 
             offset={offset}
             tolerance={tolerance}
             clip={clip}
-            capSize={diagonal * 1.5}
             bounds={bounds}
             bbox={metadata.parts[part.id]?.bbox ?? bounds}
             order={index * 2 + 1}
