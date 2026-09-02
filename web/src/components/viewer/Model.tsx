@@ -158,6 +158,16 @@ function Part({
    * geometry before anything measures with it. The offset is subtracted first
    * because an exploded part is drawn away from where its CAD data says it is.
    */
+  /*
+   * Where the hit face's triangles live, so a measurement between two faces
+   * that are not parallel has something exact to work from. References only;
+   * nothing is copied until a measurement actually needs it.
+   */
+  const surfaceAt = (event: ThreeEvent<PointerEvent | MouseEvent>) => {
+    const range = faceDrawRange(metadata.face_groups[part.id], brepFace(event));
+    return range ? { geometry: part.surface, ...range, offset } : undefined;
+  };
+
   const snapAt = (event: ThreeEvent<PointerEvent | MouseEvent>) =>
     snapTo(
       event.point.clone().sub(offset),
@@ -169,6 +179,7 @@ function Part({
       // What is being measured decides what is worth snapping to: a face
       // measurement must not land on the edge that borders the face.
       modeSpec(measureMode).wants,
+      surfaceAt(event),
     );
 
   /**
