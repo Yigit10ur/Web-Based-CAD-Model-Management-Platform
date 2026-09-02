@@ -46,6 +46,7 @@ export function Navigation({ view }: { view: Framing }) {
 
   const [modifier, setModifier] = useState<NavigationModifier>('none');
   const requestedView = useViewerStore((state) => state.requestedView);
+  const dragging = useViewerStore((state) => state.section.dragging);
 
   /*
    * The same value again, for the event handlers. They are registered once, so
@@ -192,6 +193,9 @@ export function Navigation({ view }: { view: Framing }) {
   return (
     <OrbitControls
       makeDefault
+      /* Still while a section handle is being pulled: a drag that moved the
+         plane and orbited the view at the same time is unusable. */
+      enabled={!dragging}
       // A nicety on a camera being flown, and a lag on one being aimed at a
       // feature.
       enableDamping={false}

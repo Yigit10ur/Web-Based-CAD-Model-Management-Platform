@@ -244,3 +244,81 @@ export function faceReference(
     position: positionOfPoint(point, placement, bounds),
   };
 }
+
+/**
+ * Where a drag along an axis has taken the plane.
+ *
+ * Dragging a handle in a 3D view is not "move it by how far the mouse moved":
+ * the handle is an axis in space seen through a perspective camera, and the
+ * same movement of the hand means a different distance depending on where the
+ * axis is and how it is foreshortened. What CAD packages do instead, and what
+ * this does, is find the point on the axis nearest the line the cursor is
+ * pointing along, and put the plane there. The handle then stays under the
+ * pointer however the view is turned.
+ */
+export function closestPointOnAxis(
+  rayOrigin: THREE.Vector3,
+  rayDirection: THREE.Vector3,
+  axisPoint: THREE.Vector3,
+  axisDirection: THREE.Vector3,
+): THREE.Vector3 | null {
+  const u = rayDirection.clone().normalize();
+  const v = axisDirection.clone().normalize();
+  const w = rayOrigin.clone().sub(axisPoint);
+
+  const b = u.dot(v);
+  const denominator = 1 - b * b;
+
+  /*
+   * Looking straight down the axis: every point on it is equally close to the
+   * ray, so there is no answer and the drag has to leave the plane alone
+   * rather than send it somewhere arbitrary. The handle is edge-on and
+   * invisible at that angle anyway.
+   */
+  if (Math.abs(denominator) < 1e-6) return null;
+
+  const d = u.dot(w);
+  const e = v.dot(w);
+
+  return axisPoint.clone().addScaledVector(v, (e - b * d) / denominator);
+}
+
+/**
+ * The slider value a drag has arrived at.
+ *
+ * Clamped by `positionOfPoint`, so dragging past the end of the model leaves
+ * the plane at the end rather than off it.
+ */
+export function axisDragPosition(
+  rayOrigin: THREE.Vector3,
+  rayDirection: THREE.Vector3,
+  axisPoint: THREE.Vector3,
+  placement: SectionPlacement,
+  bounds: BBox,
+): number | null {
+  const point = closestPointOnAxis(
+    rayOrigin,
+    rayDirection,
+    axisPoint,
+    sectionNormal(placement),
+  );
+
+  return point === null ? null : positionOfPoint(point, placement, bounds);
+}
+
+/** Where the handles sit: the middle of the model, on the plane itself. */
+export function handleOrigin(placement: SectionPlacement, bounds: BBox): THREE.Vector3 {
+  const normal = sectionNormal(placement);
+  const centre = new THREE.Vector3(
+    (bounds[0][0] + bounds[1][0]) / 2,
+    (bounds[0][1] + bounds[1][1]) / 2,
+    (bounds[0][2] + bounds[1][2]) / 2,
+  );
+
+  // Slide the centre onto the plane along the normal, so the handles travel
+  // with the cut instead of staying in the middle of the model.
+  return centre.addScaledVector(
+    normal,
+    cutDistance(placement, bounds) - centre.dot(normal),
+  );
+}

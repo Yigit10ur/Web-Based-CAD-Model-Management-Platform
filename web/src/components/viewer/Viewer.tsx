@@ -11,6 +11,7 @@ import { useViewerStore } from '@/store/viewer-store';
 
 import { AxisGizmo } from './AxisGizmo';
 import { MeasureLayer } from './MeasureLayer';
+import { SectionHandles } from './SectionHandles';
 import { Model } from './Model';
 import { Navigation } from './Navigation';
 
@@ -60,6 +61,17 @@ export function Viewer({ url, metadata }: { url: string; metadata: ModelMetadata
   // metre from the origin is ordinary CAD output, and a fixed camera simply
   // misses it -- the scene looks empty although everything loaded.
   const view = useMemo(() => frameModel(modelBounds(metadata.parts)), [metadata]);
+  const bounds = useMemo(() => modelBounds(metadata.parts), [metadata]);
+  // How big the model is, for sizing anything drawn beside it.
+  const span = useMemo(
+    () =>
+      Math.hypot(
+        bounds[1][0] - bounds[0][0],
+        bounds[1][1] - bounds[0][1],
+        bounds[1][2] - bounds[0][2],
+      ),
+    [bounds],
+  );
 
   return (
     <Canvas
@@ -102,6 +114,10 @@ export function Viewer({ url, metadata }: { url: string; metadata: ModelMetadata
       </Suspense>
 
       <MeasureLayer view={view} />
+
+      {/* The cut, grabbable on the model. The panel still does the same job in
+          numbers; this is the other half of the same control. */}
+      <SectionHandles bounds={bounds} size={span} />
 
       {/* Rotated onto the XY plane so it reads as the CAD ground plane, and
           sunk to the underside of the model so it reads as the floor the part

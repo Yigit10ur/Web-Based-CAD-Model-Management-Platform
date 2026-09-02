@@ -14,7 +14,10 @@ import * as THREE from 'three';
 import type { BBox, Vec3 } from '@/lib/metadata';
 import type { FaceGeometry } from '@/lib/metadata';
 import {
+  axisDragPosition,
+  closestPointOnAxis,
   cutDistance,
+  handleOrigin,
   faceReference,
   describeNormal,
   extentAlong,
@@ -340,5 +343,162 @@ describe('borrowing a direction from a clicked face', () => {
     );
 
     expect(result.taken).toBe(false);
+  });
+});
+
+describe('dragging a handle along an axis', () => {
+  it('follows the point on the axis the cursor is pointing at', () => {
+    /*
+     * Not "move it by how far the mouse moved". The handle is a line in space
+     * seen through a perspective camera, and the same movement of the hand
+     * means a different distance depending on where the axis is and how it is
+     * foreshortened.
+     */
+    const axisPoint = new THREE.Vector3(0, 0, 0);
+    const axisDirection = new THREE.Vector3(0, 0, 1);
+
+    // Looking along -X from a distance, at a point 7 up the axis.
+    const point = closestPointOnAxis(
+      new THREE.Vector3(100, 0, 7),
+      new THREE.Vector3(-1, 0, 0),
+      axisPoint,
+      axisDirection,
+    );
+
+    expect(point).not.toBeNull();
+    expect(point?.z).toBeCloseTo(7, 9);
+  });
+
+  it('answers with nothing when looking straight down the axis', () => {
+    // Every point on it is equally close to the ray, so there is no answer;
+    // moving the plane somewhere arbitrary would be worse than not moving it.
+    const point = closestPointOnAxis(
+      new THREE.Vector3(0, 0, 100),
+      new THREE.Vector3(0, 0, -1),
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, 1),
+    );
+
+    expect(point).toBeNull();
+  });
+
+  it('finds the closest point when the cursor points obliquely at the axis', () => {
+    /*
+     * Every other case here happens to have the ray starting level with the
+     * answer, so returning the ray's own origin would pass them all -- an
+     * earlier version of this file did exactly that while the formula was
+     * replaced with `rayOrigin`. This one rises as it approaches: the answer
+     * is 100 up the axis from a cursor sitting at zero.
+     */
+    const point = closestPointOnAxis(
+      new THREE.Vector3(100, 0, 0),
+      new THREE.Vector3(-1, 0, 1).normalize(),
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, 1),
+    );
+
+    expect(point?.z).toBeCloseTo(100, 6);
+  });
+
+  it('is the closest point, not merely a point on the axis', () => {
+    // Checked by walking either side of it: anywhere else on the axis is
+    // further from the line the cursor is pointing along.
+    const rayOrigin = new THREE.Vector3(60, 20, 5);
+    const rayDirection = new THREE.Vector3(-2, -1, 0.7).normalize();
+    const axisPoint = new THREE.Vector3(0, 0, 0);
+    const axisDirection = new THREE.Vector3(0, 0, 1);
+
+    const point = closestPointOnAxis(rayOrigin, rayDirection, axisPoint, axisDirection);
+    expect(point).not.toBeNull();
+
+    const line = new THREE.Ray(rayOrigin, rayDirection);
+    const distanceAt = (z: number) =>
+      line.distanceToPoint(new THREE.Vector3(0, 0, z));
+
+    const best = distanceAt(point?.z ?? 0);
+    expect(distanceAt((point?.z ?? 0) + 0.5)).toBeGreaterThan(best);
+    expect(distanceAt((point?.z ?? 0) - 0.5)).toBeGreaterThan(best);
+  });
+
+  it('is unaffected by how far away the camera is', () => {
+    // The same cursor direction from twice the distance is the same answer:
+    // that is what makes the handle stay under the pointer while zooming.
+    const near = closestPointOnAxis(
+      new THREE.Vector3(50, 0, 3),
+      new THREE.Vector3(-1, 0, 0),
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, 1),
+    );
+    const far = closestPointOnAxis(
+      new THREE.Vector3(500, 0, 3),
+      new THREE.Vector3(-1, 0, 0),
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, 1),
+    );
+
+    expect(near?.z).toBeCloseTo(far?.z ?? NaN, 9);
+  });
+
+  it('turns a drag into a slider value the panel agrees with', () => {
+    // The handle and the slider are two ways to the same number: a drag that
+    // set a position the panel then disagreed with would be two controls
+    // fighting.
+    const placement = place({ reference: 'z' });
+    const position = axisDragPosition(
+      new THREE.Vector3(1000, 0, 669),
+      new THREE.Vector3(-1, 0, 0),
+      handleOrigin(placement, BOUNDS),
+      placement,
+      BOUNDS,
+    );
+
+    expect(position).not.toBeNull();
+    expect(cutDistance({ ...placement, position: position ?? 0 }, BOUNDS)).toBeCloseTo(669, 6);
+  });
+
+  it('stops at the ends of the model rather than beyond them', () => {
+    // Dragging past the model leaves the plane at the end. Off the end there
+    // is nothing to cut and no way back with the slider.
+    const placement = place({ reference: 'z' });
+
+    const far = axisDragPosition(
+      new THREE.Vector3(1000, 0, 99999),
+      new THREE.Vector3(-1, 0, 0),
+      handleOrigin(placement, BOUNDS),
+      placement,
+      BOUNDS,
+    );
+
+    expect(far).toBe(1);
+  });
+});
+
+describe('where the handles sit', () => {
+  it('rides on the plane, not in the middle of the model', () => {
+    // Otherwise the handles stay put while the cut moves away from them, and
+    // there is nothing to grab where the cut actually is.
+    for (const position of [0.2, 0.5, 0.9]) {
+      const placement = place({ reference: 'z', position });
+      const origin = handleOrigin(placement, BOUNDS);
+
+      expect(origin.z).toBeCloseTo(cutDistance(placement, BOUNDS), 9);
+    }
+  });
+
+  it('stays in the middle of the model in the other two directions', () => {
+    const origin = handleOrigin(place({ reference: 'z' }), BOUNDS);
+
+    expect(origin.x).toBeCloseTo(30, 9);
+    expect(origin.y).toBeCloseTo(0, 9);
+  });
+
+  it('rides a tilted plane too', () => {
+    const placement = place({ reference: 'z', rotateX: 25, position: 0.3 });
+    const origin = handleOrigin(placement, BOUNDS);
+
+    expect(origin.dot(sectionNormal(placement))).toBeCloseTo(
+      cutDistance(placement, BOUNDS),
+      9,
+    );
   });
 });

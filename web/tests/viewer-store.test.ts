@@ -67,6 +67,7 @@ describe('viewer store', () => {
       enabled: false,
       picking: false,
       pickError: null,
+      dragging: false,
       reference: 'z',
       normal: [0, 0, 1],
       position: 0.5,

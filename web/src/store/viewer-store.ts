@@ -47,6 +47,13 @@ export interface SectionState extends SectionPlacement {
   picking: boolean;
   /** Why the last pick was refused, cleared as soon as one is accepted. */
   pickError: string | null;
+  /**
+   * A handle is being dragged.
+   *
+   * Read by the camera controls, which have to stand still while it is: a
+   * drag that both moved the plane and orbited the view would be unusable.
+   */
+  dragging: boolean;
 }
 
 interface ViewerState {
@@ -126,6 +133,7 @@ function initialState() {
       enabled: false,
       picking: false,
       pickError: null,
+      dragging: false,
       reference: 'z' as const,
       normal: [0, 0, 1] as [number, number, number],
       position: 0.5,
