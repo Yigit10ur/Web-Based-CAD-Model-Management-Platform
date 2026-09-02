@@ -350,9 +350,14 @@ borrowed from a flat face, and two dials to rotate away from either.
 
 **The whole glb loads before anything is drawn.** Fine at 1.7 MB, not at 50 MB.
 
-**The Dockerfile has never been built.** Nothing uses it now that Actions
-installs the package directly; it is the way onto a container host if one ever
-becomes available.
+**The images are built and run, and the one-shot commands need their own.**
+Both build; the stack comes up; the worker converts. But `drizzle-kit migrate`
+and `preflight` cannot run from the image that serves the site: it carries the
+self-contained server Next.js traced, and a trace only follows what the
+application imports -- drizzle-kit wants esbuild and preflight wants the
+postgres driver, and neither is reachable from a page. They run from a `tools`
+stage that keeps the build environment. Both were broken until the images were
+actually built, and both are commands the install instructions open with.
 
 **Native CAD formats are out of scope.** `.ipt`, `.iam`, `.sldprt` need a
 commercial SDK. The honest framing: every one of those systems exports STEP,

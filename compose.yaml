@@ -39,6 +39,10 @@ services:
   migrate:
     build:
       context: ./web
+      # Not the image that serves the site: that one carries only what the
+      # application itself reaches, and drizzle-kit is not something a page
+      # imports.
+      target: tools
     env_file: .env.deploy
     command: ["npx", "drizzle-kit", "migrate"]
     profiles: ["tools"]
@@ -47,6 +51,7 @@ services:
   preflight:
     build:
       context: ./web
+      target: tools
     env_file: .env.deploy
     command: ["node", "scripts/preflight.mjs"]
     profiles: ["tools"]
