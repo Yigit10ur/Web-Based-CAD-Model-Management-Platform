@@ -13,7 +13,13 @@ import {
   type BBox,
   type ModelMetadata,
 } from '@/lib/metadata';
-import { faceReference, modelBounds, sectionPlane } from '@/lib/section';
+import {
+  boxSide,
+  faceReference,
+  modelBounds,
+  sectionPlane,
+  shiftBox,
+} from '@/lib/section';
 import { modeSpec } from '@/lib/measure';
 import { snapTo } from '@/lib/snap';
 import { useViewerStore } from '@/store/viewer-store';
@@ -83,6 +89,7 @@ function Part({
   clip,
   capSize,
   bounds,
+  bbox,
   order,
 }: {
   part: PartGeometry;
@@ -93,6 +100,8 @@ function Part({
   clip: THREE.Plane | null;
   capSize: number;
   bounds: BBox;
+  /** This part's own box, for deciding what the cut does to it. */
+  bbox: BBox;
   order: number;
 }) {
   const hidden = useViewerStore((state) => state.hidden.has(part.id));
@@ -119,6 +128,17 @@ function Part({
   }, [part.transform]);
 
   if (hidden) return null;
+
+  /*
+   * What the cut means for this part. Almost every part of an assembly is
+   * wholly on one side of the plane, and the two that follow are the
+   * difference between five draws per part and two.
+   */
+  const side = clip ? boxSide(shiftBox(bbox, offset), clip) : 'visible';
+
+  // Behind the plane: not drawn at all. Drawing it and letting the GPU discard
+  // every fragment is work that was never going to appear.
+  if (side === 'clipped') return null;
 
   // faceIndex is the triangle that was hit; the face groups turn it back into
   // the B-rep face it came from.
@@ -211,7 +231,10 @@ function Part({
 
   return (
     <group position={position.clone().add(offset)} quaternion={quaternion} scale={scale}>
-      {clip && (
+      {/* Capped only where the plane actually passes through material. A part
+          in front of the cut has no cut face to fill in, and the stencil work
+          and the quad behind it are pure cost. */}
+      {clip && side === 'crossing' && (
         <ClippedSolid
           geometry={part.surface}
           plane={clip}
@@ -287,6 +310,7 @@ export function Model({ url, metadata }: { url: string; metadata: ModelMetadata 
             clip={clip}
             capSize={diagonal * 1.5}
             bounds={bounds}
+            bbox={metadata.parts[part.id]?.bbox ?? bounds}
             order={index * 2 + 1}
           />
         );

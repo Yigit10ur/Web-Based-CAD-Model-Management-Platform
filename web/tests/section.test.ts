@@ -15,6 +15,8 @@ import type { BBox, Vec3 } from '@/lib/metadata';
 import type { FaceGeometry } from '@/lib/metadata';
 import {
   axisDragPosition,
+  boxSide,
+  shiftBox,
   closestPointOnAxis,
   cutDistance,
   handleOrigin,
@@ -500,5 +502,75 @@ describe('where the handles sit', () => {
       cutDistance(placement, BOUNDS),
       9,
     );
+  });
+});
+
+describe('what the cut means for one part', () => {
+  /*
+   * The whole point: sectioning costs two extra passes over a part's geometry,
+   * a capping quad and a stencil clear, and a plane through an assembly
+   * crosses a handful of its parts. Deciding which is the difference between
+   * five draws per part and two.
+   */
+  const box: BBox = [
+    [0, 0, 0],
+    [10, 10, 10],
+  ];
+
+  /** Keeps everything below `at`, which is how the viewer builds its plane. */
+  const cutAtZ = (at: number) =>
+    new THREE.Plane(new THREE.Vector3(0, 0, -1), at);
+
+  it('calls a part in front of the cut visible', () => {
+    expect(boxSide(box, cutAtZ(50))).toBe('visible');
+  });
+
+  it('calls a part behind the cut clipped', () => {
+    // Nothing of it will appear, so nothing of it should be drawn.
+    expect(boxSide(box, cutAtZ(-50))).toBe('clipped');
+  });
+
+  it('calls a part the plane passes through crossing', () => {
+    expect(boxSide(box, cutAtZ(5))).toBe('crossing');
+  });
+
+  it('does not cap a plane that only grazes a face', () => {
+    /*
+     * A plane exactly on the bottom of the box keeps none of it, and one
+     * exactly on the top keeps all of it. Neither cuts any material, so
+     * neither needs a cap -- and a hair either way turns into crossing, so
+     * there is no gap where a real cut would go uncapped.
+     */
+    expect(boxSide(box, cutAtZ(0))).toBe('clipped');
+    expect(boxSide(box, cutAtZ(10))).toBe('visible');
+
+    expect(boxSide(box, cutAtZ(0.001))).toBe('crossing');
+    expect(boxSide(box, cutAtZ(9.999))).toBe('crossing');
+  });
+
+  it('is right for a plane at an angle, not just an axis-aligned one', () => {
+    // The section can be taken along any direction now, and a test that only
+    // covered the three axes would pass while every tilted cut lost its caps.
+    const diagonal = new THREE.Vector3(1, 1, 1).normalize();
+    const centre = new THREE.Vector3(5, 5, 5);
+
+    const through = new THREE.Plane(diagonal.clone().negate(), centre.dot(diagonal));
+    expect(boxSide(box, through)).toBe('crossing');
+
+    const wellPast = new THREE.Plane(diagonal.clone().negate(), centre.dot(diagonal) + 100);
+    expect(boxSide(box, wellPast)).toBe('visible');
+  });
+
+  it('follows a part that an exploded view has moved', () => {
+    // The box in the metadata is where the CAD data says the part is; an
+    // exploded part is drawn somewhere else, and the cut has to be judged
+    // where it is drawn.
+    const plane = cutAtZ(5);
+
+    // The cut keeps what is below it, so a part exploded upwards is the one
+    // that disappears.
+    expect(boxSide(box, plane)).toBe('crossing');
+    expect(boxSide(shiftBox(box, new THREE.Vector3(0, 0, 100)), plane)).toBe('clipped');
+    expect(boxSide(shiftBox(box, new THREE.Vector3(0, 0, -100)), plane)).toBe('visible');
   });
 });
