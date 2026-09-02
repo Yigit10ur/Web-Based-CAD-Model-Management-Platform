@@ -5,7 +5,7 @@ import { useGLTF } from '@react-three/drei';
 import type { ThreeEvent } from '@react-three/fiber';
 import * as THREE from 'three';
 
-import '@/lib/bvh';
+import { buildBoundsTree } from '@/lib/bvh';
 import {
   faceDrawRange,
   faceOfTriangle,
@@ -121,7 +121,7 @@ function Part({
   const setSection = useViewerStore((state) => state.setSection);
 
   useEffect(() => {
-    part.surface.computeBoundsTree?.();
+    buildBoundsTree(part.surface);
     return () => part.surface.disposeBoundsTree?.();
   }, [part.surface]);
 

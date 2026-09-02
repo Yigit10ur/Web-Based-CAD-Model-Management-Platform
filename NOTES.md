@@ -15,7 +15,7 @@ Live at <https://ehsimcad.vercel.app>. Web on Vercel
 (`fra1`), Postgres and object storage on Supabase (Frankfurt), conversion on
 GitHub Actions. Nothing runs between uploads, so nothing is billed.
 
-330 tests pass: 290 in `web` (vitest, against an in-process Postgres), 40 in
+332 tests pass: 292 in `web` (vitest, against an in-process Postgres), 40 in
 `converter` (pytest; the geometry ones skip where OCCT is not installed, which
 is CI).
 
@@ -283,6 +283,14 @@ itself, so an upload is ready in well under a minute.
 - **`GLTFLoader` strips `.` from node names**, so part ids use `_`.
 - **three.js creates the context without a stencil buffer**, and the section cap
   needs one, or the test passes everywhere and paints the whole screen.
+- **three-mesh-bvh renumbers the triangles unless told not to.** Building the
+  tree sorts them spatially and rewrites the geometry's index in place -- on a
+  real assembly, 2939 of 2952 indices moved. The picture is identical, and
+  every mapping from a triangle to a B-rep face is wrong: `face_groups` is read
+  by triangle number, and so is every raycast hit. It surfaced only once a face
+  was drawn, as a highlight lighting up triangles from all over the part; until
+  then it was silently picking the wrong surface to measure. `indirect: true`
+  keeps its own ordering and leaves the mesh alone.
 - **Presigned URLs are signed per request**, so the browser cache key changes on
   every open and the whole payload is downloaded again.
 - **drei's axis gizmo moves the camera by the distance to the world origin**,
