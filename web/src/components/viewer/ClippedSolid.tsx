@@ -21,24 +21,32 @@ interface Props {
   geometry: THREE.BufferGeometry;
   plane: THREE.Plane;
   color: THREE.Color;
-  /** Cap quad size; anything at least as large as the model works. */
+  /** Where the cut face is, in this part's own coordinates. */
+  centre: THREE.Vector3;
+  /** Cap quad size, from the part rather than from the whole model. */
   size: number;
   /** Keeps each part's stencil pass and cap paired and ordered. */
   order: number;
 }
 
-export function ClippedSolid({ geometry, plane, color, size, order }: Props) {
+export function ClippedSolid({ geometry, plane, color, centre, size, order }: Props) {
   const cap = useRef<THREE.Mesh>(null);
 
   useLayoutEffect(() => {
     if (!cap.current) return;
 
-    // Sit the quad on the plane, facing along its normal.
-    const point = new THREE.Vector3();
-    plane.coplanarPoint(point);
-    cap.current.position.copy(point);
-    cap.current.lookAt(point.clone().add(plane.normal));
-  }, [plane]);
+    cap.current.position.copy(centre);
+
+    /*
+     * A plane geometry faces +Z, so turning +Z onto the cut's normal lays it
+     * on the cut. Set directly rather than with `lookAt`, which works in world
+     * space and would have to be told where the part's group has put this.
+     */
+    cap.current.quaternion.setFromUnitVectors(
+      new THREE.Vector3(0, 0, 1),
+      plane.normal,
+    );
+  }, [plane, centre]);
 
   const stencilBase = {
     depthWrite: false,

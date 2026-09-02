@@ -365,3 +365,46 @@ export function shiftBox(bounds: BBox, offset: THREE.Vector3): BBox {
     [bounds[1][0] + offset.x, bounds[1][1] + offset.y, bounds[1][2] + offset.z],
   ];
 }
+
+/**
+ * Where to put the quad that fills in a cut face, and how big to make it.
+ *
+ * It used to go at `Plane.coplanarPoint` -- the point on the plane nearest the
+ * world *origin* -- and be sized to the whole model. That works only while the
+ * model is near the origin, which CAD data is not: an assembly a metre and a
+ * half out had its caps drawn beside it, and the cut read as hollow. The fifth
+ * thing in this project to assume the model is at 0,0,0.
+ *
+ * It goes on the part instead, and is sized to the part. A plane can cut a box
+ * no wider than the box's own diagonal, so that is the size, with a little
+ * margin for floating point. Sizing it to the model meant every part drawing a
+ * quad the size of the assembly.
+ *
+ * Returned in the part's own coordinates, which is where it is drawn: an
+ * exploded part is offset by its group, so the offset shifts what the plane
+ * cuts but not where the quad sits inside that group.
+ */
+export function capPlacement(
+  bbox: BBox,
+  offset: THREE.Vector3,
+  plane: THREE.Plane,
+): { centre: THREE.Vector3; size: number } {
+  const centre = new THREE.Vector3(
+    (bbox[0][0] + bbox[1][0]) / 2,
+    (bbox[0][1] + bbox[1][1]) / 2,
+    (bbox[0][2] + bbox[1][2]) / 2,
+  );
+
+  // How far the part's centre is from the plane, judged where it is drawn.
+  const distance = plane.normal.dot(centre.clone().add(offset)) + plane.constant;
+
+  return {
+    centre: centre.addScaledVector(plane.normal, -distance),
+    size:
+      Math.hypot(
+        bbox[1][0] - bbox[0][0],
+        bbox[1][1] - bbox[0][1],
+        bbox[1][2] - bbox[0][2],
+      ) * 1.05,
+  };
+}
