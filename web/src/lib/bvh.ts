@@ -12,3 +12,26 @@ import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-
 BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
 BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
 Mesh.prototype.raycast = acceleratedRaycast;
+
+/**
+ * Build the tree without letting it rearrange the mesh.
+ *
+ * By default three-mesh-bvh sorts the triangles spatially and rewrites the
+ * geometry's index in place to match. Nothing about the picture changes -- the
+ * same triangles are drawn -- but the numbering does, and this application
+ * reads meaning out of that numbering: `face_groups` says which triangles came
+ * from which B-rep face, and a raycast hit is turned into a face by asking
+ * where its triangle number falls. Reorder the triangles and every one of
+ * those answers is about a different face.
+ *
+ * It went unnoticed because nothing *looks* wrong until a face is drawn: the
+ * highlight lit up triangles from all over the part, and the surfaces measured
+ * against each other were not the ones anyone clicked.
+ *
+ * `indirect` keeps its ordering in a table of its own and leaves the mesh
+ * alone. Verified against an unaccelerated raycast over the real assembly: 152
+ * hits, same triangle and same face every time.
+ */
+export function buildBoundsTree(geometry: BufferGeometry): void {
+  geometry.computeBoundsTree?.({ indirect: true });
+}
