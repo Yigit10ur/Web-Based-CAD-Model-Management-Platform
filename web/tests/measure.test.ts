@@ -321,3 +321,61 @@ describe('reading a measurement in a unit', () => {
     expect(formatIn(30, '°', 'in')).toBe('30.0°');
   });
 });
+
+describe('how nearly parallel counts as parallel', () => {
+  /**
+   * Two faces that should be opposite, off by a small angle -- which is every
+   * real pair, from the file's own arithmetic if not from the part.
+   */
+  const offBy = (degrees: number): [SnapTarget, SnapTarget] => {
+    const radians = (degrees * Math.PI) / 180;
+    return [
+      onFace([0, 0, 0], [0, 0, 1]),
+      onFace([0, 0, 10], [Math.sin(radians), 0, -Math.cos(radians)]),
+    ];
+  };
+
+  it('measures the plate whose faces are a fraction of a degree out', () => {
+    /*
+     * The report this fixes. The threshold was eight hundredths of a degree,
+     * so a manager trying to measure a plate's thickness was told the faces
+     * met and to measure the angle instead -- the wrong answer to the
+     * commonest question there is.
+     */
+    for (const degrees of [0.05, 0.1, 0.5, 0.9]) {
+      const result = measure(...offBy(degrees));
+
+      expect(result.kind, `${degrees}° apart`).toBe('gap');
+      expect(result.value).toBeCloseTo(10, 1);
+    }
+  });
+
+  it('still calls a wedge a wedge', () => {
+    // Past a degree, one number stops being true of both ends: across a
+    // 100 mm face a degree is 1.7 mm of difference.
+    for (const degrees of [1.5, 5, 30]) {
+      expect(measure(...offBy(degrees)).kind, `${degrees}° apart`).toBe('angle');
+    }
+  });
+
+  it('says how far apart they are when it refuses', () => {
+    /*
+     * "Those faces meet" left someone guessing whether they mis-clicked or the
+     * part is tapered. A number settles it: 1.2° is a threshold to argue
+     * about, 47° is a mis-click.
+     */
+    const outcome = measureInMode('face-distance', ...offBy(47));
+
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) return;
+    expect(outcome.reason).toContain('47.0°');
+  });
+
+  it('does not quietly widen into faces that plainly meet', () => {
+    // A right angle is not a gap however generous the threshold is.
+    const square = measure(onFace([0, 0, 0], [0, 0, 1]), onFace([0, 0, 0], [1, 0, 0]));
+
+    expect(square.kind).toBe('angle');
+    expect(square.value).toBeCloseTo(90, 9);
+  });
+});

@@ -38,8 +38,27 @@ export interface MeasurementResult {
   description: string;
 }
 
-/** Two normals count as parallel within about a tenth of a degree. */
-const PARALLEL = 0.999999;
+/**
+ * How far from parallel two faces may be and still have a distance.
+ *
+ * This was 0.999999 as a dot product -- eight hundredths of a degree -- which
+ * no real pair of faces satisfies. A part whose opposite faces are nominally
+ * parallel is off by more than that from the file alone, and the tool refused
+ * to measure a plate's thickness and told the person to measure an angle
+ * instead. That is the wrong answer to the commonest question there is.
+ *
+ * A degree, because that is where a pair of faces stops being a gap and starts
+ * being a wedge: across a 100 mm face, one degree is 1.7 mm of difference
+ * between one end and the other, and a single number would stop being true of
+ * both ends.
+ */
+const PARALLEL_DEGREES = 1;
+const PARALLEL = Math.cos((PARALLEL_DEGREES * Math.PI) / 180);
+
+/** The angle between two normals, in degrees, treating opposite as parallel. */
+function angleBetween(alignment: number): number {
+  return (Math.acos(Math.min(1, Math.abs(alignment))) * 180) / Math.PI;
+}
 
 function planeOf(target: SnapTarget): { normal: THREE.Vector3; point: THREE.Vector3 } | null {
   const face: FaceGeometry | undefined = target.face;
@@ -85,13 +104,11 @@ export function measure(a: SnapTarget, b: SnapTarget): MeasurementResult {
 
     // Reported as the angle between the surfaces, which is what a drawing
     // dimensions: two faces 30° apart, not the 150° on the other side.
-    const radians = Math.acos(Math.min(1, Math.abs(alignment)));
-
     return {
       kind: 'angle',
       from: first.point,
       to: second.point,
-      value: (radians * 180) / Math.PI,
+      value: angleBetween(alignment),
       unit: '°',
       description: 'between faces',
     };
@@ -273,11 +290,19 @@ export function measureInMode(
         return refuse('Both picks have to be flat faces.');
       }
 
+      /*
+       * Both refusals name the angle. "Those faces meet" leaves someone
+       * guessing whether they mis-clicked or the part really is tapered; a
+       * number settles it at a glance -- 0.4° is a mis-read threshold, 47° is
+       * a mis-click.
+       */
       if (mode === 'face-distance' && result.kind === 'angle') {
-        return refuse('Those faces meet — measure the angle between them instead.');
+        return refuse(
+          `Those faces are ${result.value.toFixed(1)}° apart, so there is no one distance between them — measure the angle instead, or pick two faces that face each other.`,
+        );
       }
       if (mode === 'face-angle' && result.kind === 'gap') {
-        return refuse('Those faces are parallel — measure the distance instead.');
+        return refuse('Those faces are parallel — measure the distance between them instead.');
       }
 
       return { ok: true, result };
