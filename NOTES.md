@@ -15,7 +15,7 @@ Live at <https://ehsimcad.vercel.app>. Web on Vercel
 (`fra1`), Postgres and object storage on Supabase (Frankfurt), conversion on
 GitHub Actions. Nothing runs between uploads, so nothing is billed.
 
-297 tests pass: 257 in `web` (vitest, against an in-process Postgres), 40 in
+301 tests pass: 261 in `web` (vitest, against an in-process Postgres), 40 in
 `converter` (pytest; the geometry ones skip where OCCT is not installed, which
 is CI).
 
@@ -56,6 +56,15 @@ border.
 is measured and kept in millimetres, which is what the converter writes;
 millimetres, centimetres, metres and inches are conversions applied on the way
 to the screen. Converting on the way in would bake a rounding into the model.
+
+**Parallel means within a degree, not within a rounding error.** The threshold
+was eight hundredths of a degree, which no real pair of faces satisfies -- the
+tool refused to measure a plate's thickness and told the person to measure an
+angle instead, which is the wrong answer to the commonest question there is. A
+degree is where a pair of faces stops being a gap and starts being a wedge:
+across a 100 mm face that is 1.7 mm of difference between one end and the
+other. Past it the refusal names the angle, so a mis-click and a tapered part
+can be told apart without guessing.
 
 **Two flat faces are measured between the surfaces, not between the clicks.**
 Picking opposite sides of a 10 mm plate 30 mm apart along the face reads
