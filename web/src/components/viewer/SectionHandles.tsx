@@ -23,6 +23,14 @@ import { useViewerStore } from '@/store/viewer-store';
  * complete control rather than an extra step after the buttons.
  */
 
+/**
+ * Arrow length, as a fraction of the model's diagonal.
+ *
+ * Big enough to grab, small enough not to stand in front of the thing being
+ * sectioned -- which is the whole reason the section is on.
+ */
+const ARROW_LENGTH = 0.224;
+
 const AXES: { reference: Exclude<SectionReference, 'custom'>; direction: THREE.Vector3; color: string }[] = [
   { reference: 'x', direction: new THREE.Vector3(1, 0, 0), color: '#dc2626' },
   { reference: 'y', direction: new THREE.Vector3(0, 1, 0), color: '#16a34a' },
@@ -144,7 +152,7 @@ export function SectionHandles({ bounds, size }: { bounds: BBox; size: number })
           key={axis.reference}
           direction={axis.direction}
           color={axis.color}
-          length={size * 0.28}
+          length={size * ARROW_LENGTH}
           active={section.reference === axis.reference}
           onGrab={grab(axis.reference)}
         />
