@@ -5,7 +5,10 @@ to be picked up cold: the decisions below are the ones that would otherwise
 have to be re-derived from the code, and the measurements are the ones nobody
 should have to take twice.
 
-Started 2026-08-24. This snapshot: 2026-09-03, `main` at 66 commits.
+Started 2026-08-24. This snapshot: 2026-09-03, `main` at `1e9b59d`.
+(A commit is what this names, not a count: the merge that lands an update to
+this file is itself counted, so a number written here is wrong before it is
+pushed. It was, twice.)
 
 ---
 
