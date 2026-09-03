@@ -5,7 +5,7 @@ to be picked up cold: the decisions below are the ones that would otherwise
 have to be re-derived from the code, and the measurements are the ones nobody
 should have to take twice.
 
-Started 2026-08-24. This snapshot: 2026-09-02, `main` at 53 commits.
+Started 2026-08-24. This snapshot: 2026-09-03, `main` at 65 commits.
 
 ---
 
@@ -14,6 +14,13 @@ Started 2026-08-24. This snapshot: 2026-09-02, `main` at 53 commits.
 Live at <https://ehsimcad.vercel.app>. Web on Vercel
 (`fra1`), Postgres and object storage on Supabase (Frankfurt), conversion on
 GitHub Actions. Nothing runs between uploads, so nothing is billed.
+
+It also runs on a server of your own, which is where it is going: two
+containers, `compose.yaml`, and INSTALL.md written for whoever installs it.
+Both images have been built and run, and the worker converted a real file in
+one. The two arrangements are the same worker against the same queue -- the
+queue does not care where its workers live, which is the whole reason moving
+was a change to one file.
 
 335 tests pass: 292 in `web` (vitest, against an in-process Postgres), 43 in
 `converter` (pytest; the geometry ones skip where OCCT is not installed, which
@@ -190,6 +197,14 @@ drawing near-white on white for anyone whose system was set to dark.
 **There is no public-visibility toggle.** The column exists, but "public" here
 means every GitHub account on the internet, not everyone in the company.
 
+**The one-shot commands run from their own image.** `drizzle-kit migrate` and
+`preflight` cannot run from the image that serves the site: it carries the
+self-contained server Next.js traced, and a trace only follows what the
+*application* imports -- drizzle-kit wants esbuild, preflight wants the
+postgres driver, and neither is reachable from a page. They run from a `tools`
+stage that keeps the build environment. Both were broken until the images were
+actually built, and both are commands the install instructions open with.
+
 **Migrations are run by hand, before the merge that needs them.** A schema
 change that runs automatically is a schema change nobody read.
 
@@ -347,6 +362,16 @@ shared with it. GitHub accounts are unaffected. Sending to arbitrary addresses
 also needs a domain verified with the provider by DNS record -- that part is not
 code.
 
+**Curved surfaces cannot be measured, and the metadata is why.** A cylinder's
+`FaceGeometry` carries its radius and the direction of its axis but never where
+that axis *is*, so hole-to-hole distances, edge-to-hole distances and reading a
+diameter off a bore are all out of reach -- and they are what people ask of an
+assembly. OCCT hands the location over in the same `gp_Ax1` the direction comes
+from; the converter takes `.Direction()` and drops `.Location()`. Fifteen lines
+there, and then the work: distance between two axes is one formula when they
+are parallel and another when they are skew, and mixing them up is silently
+wrong.
+
 **No thumbnails or search.** `thumbnail_key` exists and is unused. The
 catalogue has no pagination either, which is the real scaling limit.
 
@@ -360,15 +385,6 @@ section plane itself now takes any direction: three named axes, a direction
 borrowed from a flat face, and two dials to rotate away from either.
 
 **The whole glb loads before anything is drawn.** Fine at 1.7 MB, not at 50 MB.
-
-**The images are built and run, and the one-shot commands need their own.**
-Both build; the stack comes up; the worker converts. But `drizzle-kit migrate`
-and `preflight` cannot run from the image that serves the site: it carries the
-self-contained server Next.js traced, and a trace only follows what the
-application imports -- drizzle-kit wants esbuild and preflight wants the
-postgres driver, and neither is reachable from a page. They run from a `tools`
-stage that keeps the build environment. Both were broken until the images were
-actually built, and both are commands the install instructions open with.
 
 **Native CAD formats are out of scope.** `.ipt`, `.iam`, `.sldprt` need a
 commercial SDK. The honest framing: every one of those systems exports STEP,
@@ -463,8 +479,9 @@ with GitHub breaks the moment the domain moves without it.
 
 ### Web — routes and pages
 
-Twelve API routes under `app/api/` (models, versions, projects, members,
-register, password forgot/reset, verify-email resend, uploaded, assets) and ten
+Thirteen API routes under `app/api/` (health, models, versions, projects,
+members, register, password forgot/reset, verify-email resend, uploaded,
+assets) and ten
 pages: catalogue, model, projects, project, sign-in, register, forgot, reset,
 verify, and the bundled sample that needs no database.
 
