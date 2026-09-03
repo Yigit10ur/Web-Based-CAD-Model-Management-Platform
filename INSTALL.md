@@ -27,6 +27,10 @@ enough to need the profile named: `docker compose --profile tools run --rm
 preflight`. The two tools are in a profile so that `up` does not start them as
 services.
 
+**If the server cannot reach the internet**, one step comes before those four:
+loading the images, which were built elsewhere. Everything after it is
+identical. See [If the server has no internet](#if-the-server-has-no-internet).
+
 Three rules. They are the whole of what installs get wrong:
 
 **1. Do not start anything until `preflight` says Ready.** It is the closest
@@ -110,6 +114,88 @@ Two consequences, and they are the two things installs get wrong:
 
 The upside of the same design: your proxy never carries a 200 MB body, so
 `client_max_body_size` and upload timeouts do not need raising.
+
+---
+
+## If the server has no internet
+
+The application does not need the internet. The *build* does, and that is the
+whole of the difficulty.
+
+Building these two images reaches four places: Docker Hub for the two base
+images, npm for the web application's dependencies, PyPI for OpenCascade, and a
+Debian mirror for four graphics libraries. On a closed network all four fail,
+and no amount of configuration changes that.
+
+So the build does not happen on the server. It happens on a machine that does
+have the internet, and what travels is the result.
+
+### Check the architecture first
+
+On the server:
+
+```
+uname -m
+```
+
+`x86_64` means `linux/amd64`. `aarch64` means `linux/arm64`. Get this wrong and
+the archive loads without a word of complaint, then every container exits
+immediately with `exec format error`.
+
+### Build the archive, on a machine that has the internet
+
+With Docker and a checkout of this repository:
+
+```
+./deploy/pack-images.sh linux/amd64
+```
+
+It builds all three images, checks that they really came out for the
+architecture you asked for, and leaves one file:
+`ehsimcad-images-linux-amd64.tar.gz`, about 1.1 GB. Nothing in it is secret --
+the build reads no configuration, which is why one archive serves every
+environment.
+
+That machine can be a laptop. It does not need to resemble the server: the
+image carries its own Linux.
+
+### Load it, on the server
+
+Carry the file over however files get carried there, then:
+
+```
+docker load -i ehsimcad-images-linux-amd64.tar.gz
+```
+
+Three images appear. The four steps under [Start here](#start-here) now run
+unchanged, offline: Compose builds a service only when its image is missing,
+and none of them is.
+
+### What is switched off without the internet
+
+Nothing that stops the application working, but be deliberate about it:
+
+- **Leave `AUTH_GITHUB_ID` and `AUTH_GITHUB_SECRET` empty.** Signing in through
+  GitHub needs the internet from both the server and the browser. Email and
+  password work as normal.
+- **Leave `MAIL_API_KEY` empty.** Delivery is over HTTPS to a provider. With no
+  key the messages go to the web log, where password-reset links can be read
+  out by hand.
+- **Leave `GITHUB_DISPATCH_TOKEN` and `GITHUB_REPOSITORY` empty.** They belong
+  to the hosted deployment, where conversions run as GitHub Actions. Here the
+  worker container is what converts, and it needs nothing outside.
+
+The fonts, the viewer and every asset the site serves are inside the image
+already. No page fetches anything from a third party.
+
+### Upgrading, offline
+
+The same two steps: repack on the connected machine, `docker load` on the
+server, then `docker compose run --rm migrate` and `docker compose up -d`.
+
+The image tags carry the version, so a release whose images were never loaded
+does not quietly start on the old ones -- Compose tries to build, and fails
+because it cannot reach anything. That failure is the correct one to get.
 
 ---
 
@@ -306,8 +392,18 @@ a real Postgres and a real S3 bucket:
 | the site, from outside the container | `/api/health`, `/sign-in` and the viewer all answer |
 | a real STEP file put in the queue | the worker converted it, 7428 triangles, about four seconds |
 
+The offline path was tested the same way, and deliberately: the image store and
+the build cache were emptied first, so that anything Compose decided to build
+would have had to fetch a base image and would have left one behind.
+
+| Step | Result |
+|---|---|
+| `./deploy/pack-images.sh linux/amd64` | three x86-64 images, one file of 1.1 GB |
+| `docker load` into an empty store | all three restored |
+| `preflight` and `up -d` from the loaded images | ran; the build cache was still empty afterwards, so nothing was built and nothing was pulled |
+
 Images: **457 MB** for the web, **2.0 GB** for the converter, which is
-OpenCascade.
+OpenCascade. Compressed for transfer, all three together come to 1.1 GB.
 
 **Not tried: `systemctl start`.** There is no systemd on the machine this was
 developed on, so the unit files are written from the install steps rather than
@@ -317,9 +413,11 @@ from a run.
 over standard protocols and the S3 client is already configured for path-style
 addressing, which is what MinIO needs — but MinIO itself has not been used.
 
-**Not tried: x86-64.** The images were built on arm64. The base images exist
-for both, and nothing here is architecture-specific, but the build has only
-been run on one.
+**Not tried: x86-64 hardware.** The x86-64 images have been built and run --
+preflight reached a real database and a real bucket, the site answered, the
+worker started and polled -- but on an arm64 Mac emulating x86-64, because
+there was no x86-64 machine to hand. That exercises the images and everything
+in them; it does not exercise a real Intel or AMD processor.
 
 The preflight check is the thing to trust: it exercises the real database and
 the real bucket, whatever they turn out to be.
@@ -359,6 +457,60 @@ docker compose up -d
 `.env.deploy` içindeki her ayarın ne işe yaradığı dosyanın kendi içinde
 yazılıdır. Varsayılanı olmayan dört değer: `DATABASE_URL`, depolama
 kimlik bilgileri, `AUTH_SECRET` (`openssl rand -base64 32`) ve `SITE_URL`.
+
+### İnternetsiz sunucu
+
+Uygulamanın **çalışması** için internet gerekmiyor; **derlenmesi** için
+gerekiyor. Derleme dört yere uzanır: iki temel imaj için Docker Hub, web
+bağımlılıkları için npm, OpenCascade için PyPI ve dört grafik kütüphanesi için
+bir Debian aynası. Kapalı ağda dördü de başarısız olur ve bunu hiçbir ayar
+değiştirmez.
+
+Bu yüzden derleme sunucuda yapılmaz. İnterneti olan bir makinede yapılır,
+sunucuya sonucu taşınır.
+
+**Önce mimariyi öğrenin.** Sunucuda `uname -m` çalıştırın: `x86_64` ise
+`linux/amd64`, `aarch64` ise `linux/arm64`. Yanlışını taşırsanız arşiv tek
+kelime itiraz etmeden yüklenir, sonra her konteyner anında `exec format error`
+ile kapanır.
+
+**İnterneti olan makinede** — bu depo ve Docker yeterli; bir dizüstü olabilir,
+sunucuya benzemesi gerekmez:
+
+```
+./deploy/pack-images.sh linux/amd64
+```
+
+Üç imajı derler, gerçekten istenen mimaride çıktıklarını doğrular ve tek bir
+dosya bırakır: `ehsimcad-images-linux-amd64.tar.gz`, yaklaşık 1,1 GB. İçinde
+gizli hiçbir şey yoktur — derleme hiçbir ayar okumaz, o yüzden tek arşiv her
+ortama gider.
+
+**Sunucuda:**
+
+```
+docker load -i ehsimcad-images-linux-amd64.tar.gz
+```
+
+Üç imaj görünür. Yukarıdaki dört adım bundan sonra olduğu gibi, internetsiz
+çalışır: Compose bir servisi yalnızca imajı yoksa derler, artık hiçbirinin
+imajı eksik değildir.
+
+**Kapalı ağda kapalı kalacaklar.** Hiçbiri uygulamayı durdurmaz, ama bilerek
+kapatın: `AUTH_GITHUB_ID` ve `AUTH_GITHUB_SECRET` boş kalsın (GitHub ile giriş
+hem sunucudan hem tarayıcıdan internet ister; e-posta ve şifreyle giriş
+çalışır), `MAIL_API_KEY` boş kalsın (mesajlar gönderilmez, web günlüğüne
+yazılır — şifre sıfırlama bağlantısı oradan okunabilir), `GITHUB_DISPATCH_TOKEN`
+ve `GITHUB_REPOSITORY` boş kalsın (bunlar barındırılan kurulumun ayarıdır;
+burada dönüştürmeyi worker konteyneri yapar ve dışarıya ihtiyacı yoktur). Yazı
+tipleri, viewer ve sitenin sunduğu her dosya imajın içindedir; hiçbir sayfa
+üçüncü bir yerden bir şey çekmez.
+
+**Yükseltme** aynı iki adım: bağlı makinede yeniden paketleyin, sunucuda
+`docker load`, sonra `migrate` ve `up -d`. İmaj etiketleri sürümü taşıdığı
+için, imajları yüklenmemiş bir sürüm sessizce eskisiyle başlamaz — Compose
+derlemeyi dener ve hiçbir yere ulaşamadığı için durur. Alınması gereken hata
+budur.
 
 ### Üç kural
 
@@ -425,9 +577,20 @@ viewer, ve kuyruğa konan gerçek bir STEP dosyasının worker tarafından
 dönüştürülmesi (7428 üçgen, ~4 saniye). İmajlar: web 457 MB, converter 2,0 GB
 (OpenCascade).
 
+İnternetsiz yol da aynı şekilde ve bilerek zorlanarak sınandı: imaj deposu ve
+derleme önbelleği önce tamamen boşaltıldı, böylece Compose bir şey derlemeye
+kalksaydı temel imajı çekmek zorunda kalacak ve arkasında iz bırakacaktı.
+`./deploy/pack-images.sh linux/amd64` üç x86-64 imajı ve 1,1 GB'lık tek bir
+dosya üretti; boş bir depoya `docker load` ile geri yüklendi; `preflight` ve
+`up -d` yalnızca yüklenen imajlardan çalıştı ve sonrasında derleme önbelleği
+hâlâ boştu — yani hiçbir şey derlenmedi, hiçbir şey indirilmedi.
+
 **Denenmeyenler:** `systemctl start` (bu makinede systemd yok, birim dosyaları
 kurulum adımlarından yazıldı), MinIO ya da Supabase dışı bir depolama, ve
-x86-64 mimarisi (imajlar arm64'te derlendi).
+**gerçek x86-64 donanımı**: x86-64 imajları derlendi ve çalıştırıldı, ama
+elde x86-64 makine olmadığı için arm64 bir Mac üzerinde öykünme (emulation)
+ile. Bu, imajların içindeki her şeyi sınar; gerçek bir Intel ya da AMD
+işlemcisini sınamaz.
 
 Güvenilecek şey `preflight` çıktısıdır: sizin gerçek veritabanınızı ve gerçek
 kovanızı sınar.
