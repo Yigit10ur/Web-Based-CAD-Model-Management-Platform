@@ -5,7 +5,7 @@ to be picked up cold: the decisions below are the ones that would otherwise
 have to be re-derived from the code, and the measurements are the ones nobody
 should have to take twice.
 
-Started 2026-08-24. This snapshot: 2026-09-03, `main` at 65 commits.
+Started 2026-08-24. This snapshot: 2026-09-03, `main` at 66 commits.
 
 ---
 
@@ -21,6 +21,10 @@ Both images have been built and run, and the worker converted a real file in
 one. The two arrangements are the same worker against the same queue -- the
 queue does not care where its workers live, which is the whole reason moving
 was a change to one file.
+
+A network with no way out is provided for: the images are built on a machine
+that has the internet and carried over as one file, after which the install
+steps are the same ones.
 
 335 tests pass: 292 in `web` (vitest, against an in-process Postgres), 43 in
 `converter` (pytest; the geometry ones skip where OCCT is not installed, which
@@ -204,6 +208,21 @@ self-contained server Next.js traced, and a trace only follows what the
 postgres driver, and neither is reachable from a page. They run from a `tools`
 stage that keeps the build environment. Both were broken until the images were
 actually built, and both are commands the install instructions open with.
+
+**The images travel; the build does not.** A closed network cannot build this,
+and no configuration changes that: the build reaches Docker Hub for two base
+images, npm, PyPI for OpenCascade, and a Debian mirror. So every service in
+`compose.yaml` names the image it wants. Compose builds a service only when its
+image is absent, which is what turns `docker load` into a complete substitute
+for the build -- the four install steps then run offline, unchanged.
+`deploy/pack-images.sh` builds the three images for a named architecture and
+saves them into one file of about 1.1 GB. It refuses to pack images whose
+architecture is not the one asked for, which is the failure worth catching:
+the wrong architecture loads without a word and every container then dies at
+`exec format error`. The running application never wanted the internet anyway
+-- fonts are downloaded at build time and served from the image, and GitHub
+sign-in, email delivery and the Actions dispatch are each off when their
+settings are empty.
 
 **Migrations are run by hand, before the merge that needs them.** A schema
 change that runs automatically is a schema change nobody read.
@@ -493,6 +512,10 @@ verify, and the bundled sample that needs no database.
 | `ARCHITECTURE.md` / `.en.md` | The design, with dated notes recording what was verified or changed and when. |
 | `DEPLOY.md` | The runbook: separate production database, environment variables, where the converter runs, and the mail provider. |
 | `CONTRIBUTING.md` | Working conventions and the branching model. |
+| `INSTALL.md` | Installing it on a server of your own, written for whoever does that and not for anyone who has seen this code. In English, with a Turkish summary. |
+| `compose.yaml` | The two services, plus `migrate` and `preflight` as one-shot commands. Every service names its image, which is what lets a loaded image stand in for a build. |
+| `deploy/pack-images.sh` | Builds the images for a named architecture on a machine with the internet and saves them as one file, for a server that has none. |
+| `deploy/systemd/` | A unit for each process, for an install without containers. Written from the install steps; not run. |
 | `.github/workflows/ci.yml` | Lint, typecheck, test, build on every pull request. |
 | `.github/workflows/convert.yml` | The converter, started by the web application after an upload. |
 

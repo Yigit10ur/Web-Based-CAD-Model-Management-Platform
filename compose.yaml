@@ -10,9 +10,19 @@
 #
 # Check it before trusting it:
 #   docker compose run --rm preflight
+#
+# On a machine with no way out to the internet, load the images first:
+#
+#   docker load -i ehsimcad-images-linux-amd64.tar.gz
+#
+# and the commands above run unchanged. Every service names the image it
+# wants, so Compose builds only when that image is not already there -- which
+# is what makes a loaded image enough. `deploy/pack-images.sh` is what builds
+# the archive, on a machine that does have the internet.
 
 services:
   web:
+    image: ehsimcad-web:0.1.0
     build:
       context: ./web
     env_file: .env.deploy
@@ -29,6 +39,7 @@ services:
   # take different jobs rather than the same one. One is enough until uploads
   # start queueing behind each other.
   worker:
+    image: ehsimcad-worker:0.1.0
     build:
       context: ./converter
     env_file: .env.deploy
@@ -37,6 +48,7 @@ services:
   # Bring the schema up. Runs to completion and exits, so it is `run`, not
   # `up`: `docker compose run --rm migrate`.
   migrate:
+    image: ehsimcad-tools:0.1.0
     build:
       context: ./web
       # Not the image that serves the site: that one carries only what the
@@ -49,6 +61,9 @@ services:
 
   # Reports what is missing or unreachable before anything tries to serve.
   preflight:
+    # The same image as `migrate`, named the same, so it is built once and
+    # travels once.
+    image: ehsimcad-tools:0.1.0
     build:
       context: ./web
       target: tools
